@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcpls": {
+      "command": "bash",
+      "args": [
+        "${PLUGIN_ROOT}/scripts/mcpls-lsp.sh"
+      ]
+    }
+  }
+}

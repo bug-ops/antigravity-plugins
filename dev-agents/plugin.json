@@ -1,0 +1,44 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "dev-agents",
+  "displayName": "Dev Agents",
+  "version": "1.0.0",
+  "description": "15 specialist software engineering agents and 21 workflow skills with Rust, TypeScript, and Luau/Lua stack profiles, MCP-LSP intelligence via mcpls, and safety hooks.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Initialize this project for dev-agents with /init-project",
+    "Run /team-develop to design, implement, and review a new feature",
+    "Run /continuous-improvement full to audit architecture, security, and live behavior"
+  ],
+  "author": {
+    "name": "Andrei G",
+    "email": "andrei.g@my.com",
+    "url": "https://github.com/bug-ops"
+  },
+  "homepage": "https://github.com/bug-ops/antigravity-plugins/tree/main/dev-agents",
+  "repository": "https://github.com/bug-ops/antigravity-plugins",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "development",
+    "rust",
+    "typescript",
+    "javascript",
+    "luau",
+    "lua",
+    "roblox",
+    "stack-profiles",
+    "architecture",
+    "testing",
+    "performance",
+    "security",
+    "ci-cd",
+    "code-review",
+    "debugging",
+    "lsp",
+    "mcpls",
+    "orchestration",
+    "sdd",
+    "continuous-improvement"
+  ]
+}

@@ -1,0 +1,122 @@
+# Path and PathBuf APIs
+
+## `PathBuf::add_extension` / `Path::with_added_extension` — 1.91
+
+**This is the most important addition in 1.91 for file-handling code.** It fixes a long-standing footgun with `with_extension`.
+
+### The problem these APIs solve
+
+`with_extension` **replaces** the final extension. For `foo.tar.gz` → `with_extension("bak")` yields `foo.tar.bak`, dropping `.gz`. For paths with only one "extension" this rarely matters, but for compound extensions and when you want to *add* a suffix (not replace), it breaks.
+
+Many codebases have workarounds like `format!("{}.tmp", path.display())` or manually composing via `file_stem`. These all become unnecessary.
+
+### Usage
+
+```rust
+// add_extension: mutates in place
+let mut p = PathBuf::from("data.json");
+p.add_extension("tmp");
+assert_eq!(p, PathBuf::from("data.json.tmp"));
+
+// with_added_extension: returns a new PathBuf
+let p = Path::new("data.json").with_added_extension("tmp");
+assert_eq!(p, PathBuf::from("data.json.tmp"));
+
+// Compare to with_extension, which REPLACES:
+let wrong = Path::new("data.json").with_extension("tmp");
+assert_eq!(wrong, PathBuf::from("data.tmp")); // lost .json!
+```
+
+### Common sites to replace
+
+- **Atomic writes** via tmp file: `path.with_extension("tmp")` is often wrong for `.jsonl`, `.tar.gz`, etc. Use `with_added_extension("tmp")`.
+- **Sidecar files**: for `audit.log` + `.meta.json`, `with_extension("meta.json")` works by accident (no other dots), but `with_added_extension("meta.json")` is explicit and future-proof.
+- **Backup files**: `config.toml.bak`, `db.sqlite.backup`, etc.
+
+## `Path::file_prefix` — 1.91
+
+**Like `file_stem` but stops at the first dot, not the last.**
+
+```rust
+let p = Path::new("archive.tar.gz");
+
+assert_eq!(p.file_stem(),   Some(OsStr::new("archive.tar"))); // last dot
+assert_eq!(p.file_prefix(), Some(OsStr::new("archive")));     // first dot
+```
+
+Use when you want the "base name" ignoring all extensions. Rare in code — most codebases only use `file_stem`, which is usually fine.
+
+## `PathBuf::into_string` / `Path::is_empty` — 1.98
+
+**Two small ergonomic wins for path-to-string boundaries.**
+
+```rust
+// Before — the OsString detour, with the error type juggling
+let s = pb.into_os_string().into_string().map_err(PathBuf::from)?;
+// After (1.98+) — Err carries the original PathBuf back
+let s: String = pb.into_string().map_err(|pb| Error::NonUtf8(pb))?;
+
+// Before
+if path.as_os_str().is_empty() { /* ... */ }
+// After (1.98+)
+if path.is_empty() { /* ... */ }
+```
+
+`into_string` fails (returning the `PathBuf` unchanged) when the path is not valid UTF-8 — same contract as `OsString::into_string`, minus the boilerplate. `is_empty` matters because `Path::new("")` is a legal value that several APIs produce (`parent()` chains, `strip_prefix` results, default structs); checking it via `as_os_str()` was the common workaround.
+
+## `Path::trim_prefix` — 1.100
+
+**Make a path relative to a base when it is under it, otherwise keep it — replaces `strip_prefix(base).unwrap_or(path)`.**
+
+```rust
+// Before
+let shown = path.strip_prefix(&workspace_root).unwrap_or(path);
+
+// After (1.100+)
+let shown = path.trim_prefix(&workspace_root);
+```
+
+Matching is component-wise, exactly like `strip_prefix`: `Path::new("/test/a").trim_prefix("/te")` returns the path unchanged, and a trailing slash on the base is ignored. Trimming the whole path yields `Path::new("")` — pair with `Path::is_empty` (1.98) if that case needs a `"."` fallback. There is no `Path::trim_suffix`.
+
+Right for display code (diagnostics, log lines, relative paths in reports). Keep `strip_prefix` + `?` when a path outside the base is an error — `trim_prefix` would silently pass an absolute path through, which matters for sandbox and path-traversal checks.
+
+## `PartialEq` between `Path`/`PathBuf` and `&str`/`String` — 1.91
+
+**Removes the need for `to_string_lossy()` in comparisons.**
+
+```rust
+let p = Path::new("/etc/hostname");
+
+// Before (allocates)
+if p.to_string_lossy() == "/etc/hostname" { /* ... */ }
+
+// After (1.91+) — direct comparison, no allocation
+if p == "/etc/hostname" { /* ... */ }
+if p == Path::new("/etc/hostname") { /* ... */ }
+```
+
+Available impls: `Path == str`, `Path == String`, `PathBuf == str`, `PathBuf == String`, plus the symmetric reverse directions.
+
+**Caveat:** this is a byte-level comparison that respects platform encoding. On Windows, non-UTF-8 paths will never equal any `str` (because `&str` is always UTF-8). Use `OsStr`/`OsString` for those.
+
+## Summary: use these three together
+
+The 1.91 path APIs are designed to be used together. Before:
+
+```rust
+let meta_path = if let (Some(parent), Some(stem)) = (path.parent(), path.file_stem()) {
+    parent.join(format!("{}.meta.json", stem.to_string_lossy()))
+} else {
+    path.with_extension("meta.json")
+};
+if meta_path.to_string_lossy().ends_with("backup.meta.json") { /* ... */ }
+```
+
+After:
+
+```rust
+let meta_path = path.with_added_extension("meta.json");
+if meta_path == "backup.meta.json" { /* ... */ }
+```
+
+Three lines replaced one, two allocations removed, and the edge case for paths without a file name is correctly handled (`with_added_extension` returns the path unchanged if there's no file name).

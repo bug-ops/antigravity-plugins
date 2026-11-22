@@ -1,0 +1,832 @@
+# Rust release changelog (1.89 – 1.100)
+
+Consolidated changes relevant to application code. For the full release notes, see [doc.rust-lang.org/stable/releases.html](https://doc.rust-lang.org/stable/releases.html).
+
+Each version section lists:
+- **Language/syntax** changes
+- **Stabilized APIs** (grouped by category)
+- **Compatibility notes** (things that might break existing code)
+
+---
+
+## Rust 1.89 (2025-08-07)
+
+### Language
+
+- Stabilized `feature(generic_arg_infer)` — explicitly inferred const arguments with `_`.
+- New warn-by-default `mismatched_lifetime_syntaxes` lint (supersedes `elided_named_lifetimes`).
+- `dangerous_implicit_autorefs` lint is now warn-by-default (deny in 1.90).
+- Stabilized AVX-512 target features for x86.
+- Stabilized SHA-512, SM3, SM4 target features for x86.
+- Stabilized LoongArch target features (f, d, frecipe, lasx, lbt, lsx, lvz).
+- Stabilized `repr128` (`#[repr(u128)]`, `#[repr(i128)]`).
+- `format_args!()` results can now be stored in variables.
+- Extended temporary lifetime extension through tuple struct / tuple variant constructors.
+- `extern "C"` on wasm32-unknown-unknown now uses a standards-compliant ABI (**breaking for wasm-bindgen < 0.2.89**).
+
+### Stabilized APIs
+
+**I/O**:
+- `File::lock`, `File::lock_shared`, `File::try_lock`, `File::try_lock_shared`, `File::unlock`
+- `io::Seek for io::Take`
+
+**Pointer/memory**:
+- `NonNull::from_ref`, `NonNull::from_mut`
+- `NonNull::without_provenance`, `NonNull::with_exposed_provenance`, `NonNull::expose_provenance`
+
+**String/collection**:
+- `OsString::leak`, `PathBuf::leak`
+- `Result::flatten`
+
+**Networking** (Linux-only):
+- `std::os::linux::net::TcpStreamExt::quickack`, `set_quickack`
+
+**Numerics**:
+- `NonZero<char>`
+
+**Iterator**:
+- `Default` for `array::IntoIter`
+- `Clone` for `slice::ChunkBy`
+
+**Const-in-const**:
+- `<[T; N]>::as_mut_slice` const
+- `<[u8]>::eq_ignore_ascii_case` const
+- `str::eq_ignore_ascii_case` const
+
+### Compatibility notes
+
+- `missing_fragment_specifier` is now a hard error in macros.
+- Long-deprecated `std::intrinsics::drop_in_place` removed.
+- Warnings about `stdcall`/`fastcall`/`cdecl` on non-x86-32 targets.
+- `extern "C"` ABI change on wasm32-unknown-unknown (see Language above).
+
+---
+
+## Rust 1.90 (2025-09-18)
+
+### Language
+
+- Split `unknown_or_malformed_diagnostic_attributes` into four finer-grained lints.
+- Allow constants whose final value has references to mutable/external memory (but reject them as patterns).
+- Allow volatile access to non-Rust memory, including address 0.
+
+### Compiler
+
+- **`lld` used by default on `x86_64-unknown-linux-gnu`.** Major build-time improvement.
+- Tier 3 `musl` targets now link dynamically by default.
+
+### Stabilized APIs
+
+**Numerics**:
+- `u{N}::checked_sub_signed`, `overflowing_sub_signed`, `saturating_sub_signed`, `wrapping_sub_signed`
+
+**CStr**:
+- Cross-type `PartialEq` between `CStr`, `CString`, and `Cow<CStr>` — many impls
+- `impl Copy for IntErrorKind`, `impl Hash for IntErrorKind`
+
+**Const-in-const**:
+- `<[T]>::reverse` const
+- `f32::floor`/`ceil`/`trunc`/`fract`/`round`/`round_ties_even` const (same for f64)
+
+### Cargo
+
+- `cargo publish` supports multi-package publishing: `cargo publish -p a -p b`.
+- `http.proxy-cainfo` config for proxy certificates.
+- `cargo package` uses `gix` instead of libgit2.
+
+### Compatibility notes
+
+- `x86_64-apple-darwin` demoted to Tier 2 with host tools.
+- `UnixStream` sets `MSG_NOSIGNAL` by default on Unix — breaks code relying on SIGPIPE.
+- `core::iter::Fuse` `Default` impl now constructs `I::default()` internally instead of always being empty.
+- On Unix, `env::home_dir` uses fallback if `HOME` is empty.
+- `const-eval`: error when initializing a static writes to that static.
+
+---
+
+## Rust 1.91 (2025-10-30) — biggest release for application code
+
+### Language
+
+- Lower pattern bindings in written order; drop order based on primary bindings.
+- Stabilized declaration of C-style variadic functions for `sysv64`, `win64`, `efiapi`, `aapcs` ABIs.
+- New `dangling_pointers_from_locals` lint.
+- `semicolon_in_expressions_from_macros` upgraded from warn to deny.
+- Warn-by-default `integer_to_ptr_transmutes` lint.
+- Stabilized `sse4a` and `tbm` target features.
+- Stabilized LoongArch32 inline assembly.
+- New `target_env = "macabi"` / `"sim"` cfgs (replacing `target_abi`).
+
+### Stabilized APIs
+
+**Paths**:
+- `Path::file_prefix`
+- `PathBuf::add_extension`, `PathBuf::with_added_extension`
+- `impl PartialEq<str> for PathBuf`, `PartialEq<String> for PathBuf`, plus symmetric
+- `impl PartialEq<str> for Path`, `PartialEq<String> for Path`, plus symmetric
+
+**Time**:
+- `Duration::from_mins`, `Duration::from_hours`
+
+**IP addresses**:
+- `Ipv4Addr::from_octets`
+- `Ipv6Addr::from_octets`, `Ipv6Addr::from_segments`
+
+**Strings**:
+- `str::ceil_char_boundary`, `str::floor_char_boundary`
+
+**Numerics** — `strict_*` family:
+- `{integer}::strict_add`, `strict_sub`, `strict_mul`, `strict_div`, `strict_div_euclid`, `strict_rem`, `strict_rem_euclid`, `strict_neg`, `strict_shl`, `strict_shr`, `strict_pow`
+- Mixed-sign: `i{N}::strict_add_unsigned`, `strict_sub_unsigned`, `strict_abs`; `u{N}::strict_add_signed`, `strict_sub_signed`
+- `i{N}::midpoint` (complements existing `u{N}::midpoint`)
+
+**Numerics** — bigint helpers:
+- `u{N}::carrying_add`, `borrowing_sub`, `carrying_mul`, `carrying_mul_add`
+- `u{N}::checked_signed_diff`
+
+**Atomics**:
+- `AtomicPtr::fetch_ptr_add`, `fetch_ptr_sub`, `fetch_byte_add`, `fetch_byte_sub`, `fetch_or`, `fetch_and`, `fetch_xor`
+
+**Collections**:
+- `BTreeMap::extract_if`, `BTreeSet::extract_if`
+
+**Iterators**:
+- `core::iter::chain` (free function)
+- `core::array::repeat`
+
+**Panic**:
+- `PanicHookInfo::payload_as_str`
+
+**Pin**:
+- `impl<T> Default for Pin<Box<T>>` (and for `Pin<Rc<T>>`, `Pin<Arc<T>>`)
+
+**Cell**:
+- `Cell::as_array_of_cells`
+
+**Misc**:
+- `impl Debug for std::os::windows::ffi::EncodeWide`
+- `impl Sum` / `Product` for `Saturating<u{N}>` (and `&` variants)
+
+**Const-in-const**:
+- `<[T; N]>::each_ref`, `each_mut` const
+- `OsString::new` const, `PathBuf::new` const
+- `TypeId::of` const
+- `ptr::with_exposed_provenance`, `with_exposed_provenance_mut` const
+
+### Cargo
+
+- **Stabilized `build.build-dir`** config — separate intermediate artifacts location from final outputs.
+- `--target host-tuple` literal expands to host machine triple.
+
+### Compatibility notes
+
+- Coroutine captures always drop-live.
+- Apple linker: SDK root always passed; libraries in `/usr/local/lib` no longer auto-linked.
+- Relaxed bounds like `TraitRef<AssocTy: ?Sized>` now correctly forbidden.
+- Deprecation lints in name resolution now deny-by-default and report in dependencies.
+- `semicolon_in_expressions_from_macros` now deny-by-default.
+- Trait impl modifiers in inherent impls syntactically invalid.
+- Stricter attribute parsing — errors on many previously-accepted invalid attributes.
+- Edition 2024: temporary lifetime shortening applied to `pin!`, `format_args!`, `write!`, `writeln!` in `if let` scrutinees.
+- Static closures (`static || {}`) syntactically invalid.
+- Update to LLVM 21.
+
+---
+
+## Rust 1.92 (2025-12-11)
+
+### Language
+
+- Documented `MaybeUninit` representation and validity.
+- Allow `&raw [mut | const]` for union fields in safe code.
+- Prefer item bounds of associated types over where-bounds for auto-traits and `Sized`.
+- `#[track_caller]` + `#[no_mangle]` can be combined.
+- Made `never_type_fallback_flowing_into_unsafe` and `dependency_on_unit_never_type_fallback` deny-by-default.
+- `unused_must_use` no longer warns on `Result<(), Uninhabited>` or `ControlFlow<Uninhabited, ()>`.
+
+### Compiler
+
+- Minimum external LLVM is now 20.
+- Removed command-line args from PDB embedding (fixes incremental builds on non-PDB targets).
+
+### Stabilized APIs
+
+**Sync**:
+- `RwLockWriteGuard::downgrade` (std only — not tokio, not parking_lot)
+
+**Numerics**:
+- `NonZero<u{N}>::div_ceil`
+
+**Location**:
+- `Location::file_as_c_str`
+
+**Box / Rc / Arc**:
+- `Box::new_zeroed`, `Box::new_zeroed_slice`
+- `Rc::new_zeroed`, `Rc::new_zeroed_slice`
+- `Arc::new_zeroed`, `Arc::new_zeroed_slice`
+
+**BTreeMap**:
+- `btree_map::Entry::insert_entry`
+- `btree_map::VacantEntry::insert_entry`
+
+**proc_macro**:
+- `impl Extend<proc_macro::Group>` for `TokenStream` (and for `Literal`, `Punct`, `Ident`)
+
+**Iterator**:
+- `Iterator::eq{_by}` specialized for `TrustedLen` (internal optimization)
+
+**Const-in-const**:
+- `<[_]>::rotate_left`, `rotate_right` const
+
+### Compatibility notes
+
+- `unused_must_use` on `Result<(), Uninhabited>` removed (improvement, not breakage, but noted).
+- Prevent downstream `impl DerefMut for Pin<LocalType>`.
+- Don't apply temporary lifetime extension to arguments of non-extended `pin!` and formatting macros.
+- `iter::Repeat::last` and `iter::Repeat::count` now panic (instead of looping infinitely).
+- `invalid_macro_export_arguments` upgraded to deny-by-default, reports in dependencies.
+
+---
+
+## Rust 1.93 (2026-01-22)
+
+### Language
+
+- Stabilized declaration of C-style variadic functions for `system` ABI.
+- Emit error when using some keywords as `cfg` predicate.
+- Stabilized `asm_cfg` — `#[cfg]` within `asm!` blocks.
+- Const-evaluation: support copying pointers byte-by-byte.
+- LUB coercions handle function item types and differing-safety functions correctly.
+- Allow `const` items containing mutable references to `static` (very unsafe, but not always UB).
+- New warn-by-default `const_item_interior_mutations` lint.
+- New warn-by-default `function_casts_as_integer` lint.
+
+### Compiler
+
+- Stabilized `-Cjump-tables=bool`.
+
+### Stabilized APIs
+
+**MaybeUninit** (big category):
+- `<[MaybeUninit<T>]>::assume_init_drop`
+- `<[MaybeUninit<T>]>::assume_init_ref`, `assume_init_mut`
+- `<[MaybeUninit<T>]>::write_copy_of_slice`
+- `<[MaybeUninit<T>]>::write_clone_of_slice`
+
+**Slices**:
+- `<[T]>::as_array::<N>`, `as_mut_array::<N>`
+- `<*const [T]>::as_array`, `<*mut [T]>::as_mut_array`
+
+**String / Vec**:
+- `String::into_raw_parts`
+- `Vec::into_raw_parts`
+
+**VecDeque**:
+- `VecDeque::pop_front_if`, `pop_back_if`
+
+**Integers**:
+- `<iN>::unchecked_neg`, `unchecked_shl`, `unchecked_shr`
+- `<uN>::unchecked_shl`, `unchecked_shr`
+
+**Time**:
+- `Duration::from_nanos_u128`
+
+**Character constants**:
+- `char::MAX_LEN_UTF8`, `char::MAX_LEN_UTF16`
+
+**Formatting**:
+- `std::fmt::from_fn`, `std::fmt::FromFn`
+
+### Cargo
+
+- `CARGO_CFG_DEBUG_ASSERTIONS` env var available in build scripts based on profile.
+- `cargo tree --format` supports long-form variable names.
+- `cargo clean --workspace`.
+
+### Compatibility notes
+
+- `#[test]` attribute on invalid targets (trait methods, types) is now an error, previously silently ignored.
+- `cargo publish` no longer keeps `.crate` tarballs as final artifacts when `build.build-dir` is set.
+- `deref_nullptr` lint upgraded from warn-by-default to deny-by-default.
+- `BTreeMap::append` no longer overwrites existing keys (**behavior change**).
+- Don't require `T: RefUnwindSafe` for `vec::IntoIter<T>: UnwindSafe`.
+
+---
+
+## Rust 1.94 (2026-03-05)
+
+### Language
+
+- Impls and impl items inherit `dead_code` lint level of corresponding traits/items.
+- Stabilized 29 RISC-V target features (RVA22U64/RVA23U64 profiles).
+- New warn-by-default `unused_visibilities` lint (for visibility on `const _`).
+- Update to Unicode 17.
+- Fix incorrect lifetime errors for closures.
+
+### Stabilized APIs
+
+**Slices**:
+- `<[T]>::array_windows::<N>`
+- `<[T]>::element_offset`
+
+**LazyCell / LazyLock**:
+- `LazyCell::get`, `get_mut`, `force_mut`
+- `LazyLock::get`, `get_mut`, `force_mut`
+
+**Conversions**:
+- `impl TryFrom<char> for usize`
+
+**Iterator**:
+- `std::iter::Peekable::next_if_map`, `next_if_map_mut`
+
+**x86 SIMD**:
+- `avx512fp16` intrinsics (excluding those needing unstable `f16`)
+- AArch64 NEON fp16 intrinsics (excluding those needing `f16`)
+
+**Math constants**:
+- `f32::consts::EULER_GAMMA`, `f64::consts::EULER_GAMMA`
+- `f32::consts::GOLDEN_RATIO`, `f64::consts::GOLDEN_RATIO`
+
+**Const-in-const**:
+- `f32::mul_add`, `f64::mul_add` const
+
+### Cargo
+
+- Stabilized the `include` key in Cargo config — load additional config files.
+- Stabilized `pubtime` field in registry index.
+- Cargo parses TOML v1.1 for manifests.
+- `CARGO_BIN_EXE_<crate>` available at runtime.
+
+### Compatibility notes
+
+- Forbid freely casting lifetime bounds of `dyn` types.
+- Changes to closure pattern-matching precise captures (may affect borrow checker and Drop ordering).
+- Standard library macros imported via prelude, not `#[macro_use]` injection — may cause ambiguity errors for glob-imported same-named macros.
+- Shebangs not stripped in expression-context `include!`.
+- Cross-crate visibility of ambiguous glob reexports.
+- Windows: `SystemTime::checked_sub_duration` returns `None` for times before 1/1/1601.
+- Lifetime identifiers NFC-normalized.
+- Cross-compiler consistent filename handling — may affect Cargo diagnostic paths.
+- Switch to `annotate-snippets` for compiler error emission (minor visual changes).
+
+---
+
+## Rust 1.95 (2026-04-16)
+
+Source: [releases.rs/docs/1.95.0/](https://releases.rs/docs/1.95.0/).
+
+### Language
+
+- **`if let` guards on match arms.** Pattern matching can now use `if let` as a guard, allowing destructure-and-test in a single arm:
+
+  ```rust
+  match event {
+      Event::Tick(t) if let Some(deadline) = self.deadline && t > deadline => fire(),
+      Event::Tick(t) if let Some(deadline) = self.deadline => arm(deadline - t),
+      _ => {}
+  }
+  ```
+
+- Stabilized inline assembly for PowerPC / PowerPC64.
+- `use` path-segment keywords with renaming — improves importing items whose paths use keywords (use raw identifiers in renames).
+- Consistent const-eval padding behavior — padding bytes are now handled identically across typed copies in const evaluation.
+- Pattern matching semantics no longer depend on context (cross-crate / cross-module consistency).
+
+### Stabilized APIs
+
+**Conversions**:
+- `impl TryFrom<u8> for bool`, `TryFrom<u16>`, `TryFrom<u32>`, `TryFrom<u64>`, `TryFrom<u128>`, `TryFrom<usize>` (and signed equivalents). Strict — returns `Err` for any value other than 0 or 1.
+
+**MaybeUninit / Cell array conversions**:
+- `impl<T, const N: usize> From<[MaybeUninit<T>; N]> for [MaybeUninit<T>; N]` (and reverse conversions via existing routes)
+- `impl<T, const N: usize> AsRef<[MaybeUninit<T>]> for [MaybeUninit<T>; N]`
+- `impl<T, const N: usize> AsMut<[MaybeUninit<T>]> for [MaybeUninit<T>; N]`
+- `impl<T, const N: usize> AsRef<[Cell<T>]> for Cell<[T; N]>` and related `Cell<[T; N]>` ↔ slice conversions
+
+**Atomics — update / try_update**:
+- `AtomicPtr::update`, `AtomicPtr::try_update`
+- `AtomicBool::update`, `AtomicBool::try_update`
+- `AtomicIsize::update`, `AtomicIsize::try_update`
+- `AtomicUsize::update`, `AtomicUsize::try_update`
+
+  Each replaces the canonical `compare_exchange_weak` loop with a closure-driven update:
+
+  ```rust
+  // Before
+  let mut cur = counter.load(Acquire);
+  loop {
+      let next = cur + 1;
+      match counter.compare_exchange_weak(cur, next, AcqRel, Acquire) {
+          Ok(_) => break,
+          Err(c) => cur = c,
+      }
+  }
+
+  // After (1.95+)
+  let _ = counter.update(AcqRel, Acquire, |c| c + 1);
+  ```
+
+**Pointer unchecked conversions**:
+- `<*const T>::as_ref_unchecked`
+- `<*mut T>::as_ref_unchecked`
+- `<*mut T>::as_mut_unchecked`
+
+  Replace `unsafe { &*ptr }` / `&mut *ptr` when the pointer is known non-null. Safety contract is unchanged (caller must guarantee non-null and aliasing rules) but the API is more explicit.
+
+**Macros and hints**:
+- `core::cfg_select!` — std replacement for the `cfg-if` crate. Use to select between code blocks at compile time based on `cfg` predicates.
+- `core::hint::cold_path()` — marks the enclosing branch as cold for the optimizer without resorting to `#[cold]` helper functions.
+
+**Range types**:
+- `core::range` module now public, with `core::range::RangeInclusive` and `core::range::RangeInclusiveIter` (separates the type-level range from its iterator state — addresses the long-standing "range is its own iterator" pitfall).
+
+**Const-in-const**:
+- `std::fmt::from_fn` is now usable in const contexts (the stable impl from 1.93).
+- `ControlFlow::is_break`, `ControlFlow::is_continue` const.
+
+### Compiler
+
+- LLVM 22.
+- New `--remap-path-scope` flag — granular control over which paths get remapped in compiled binaries (useful for reproducible builds and privacy).
+
+### Platform support
+
+- Promoted to Tier 2 with host tools: `powerpc64-unknown-linux-musl`, `aarch64-apple-tvos`, `aarch64-apple-tvos-sim`, `aarch64-apple-watchos`, `aarch64-apple-watchos-sim`, `aarch64-apple-visionos`, `aarch64-apple-visionos-sim`.
+
+### Performance and tools
+
+- `str::contains` is significantly faster on ARM64 (NEON).
+- Rustdoc search ranks unstable items lower.
+- Rustdoc gained a "hide deprecated items" toggle.
+
+### Compatibility notes
+
+- Stricter validation of `use $crate` imports — some previously-accepted unsupported forms are now errors.
+- Non-exhaustive enum matching now reads the discriminant even for single-variant enums, which can change closure captures.
+- JSON target specs now require `-Z unstable-options` (previously silently accepted).
+- Array coercions may produce fewer type-inference constraints than before — rare cases may need an explicit annotation.
+- Feature attribute arguments are validated against the target type (catches previously-accepted misuse).
+
+---
+
+## Rust 1.96 (2026-05-28)
+
+Source: [releases.rs/docs/1.96.0/](https://releases.rs/docs/1.96.0/) and [blog.rust-lang.org/2026/05/28/Rust-1.96.0](https://blog.rust-lang.org/2026/05/28/Rust-1.96.0/).
+
+### Language
+
+- Never-type (`!`) coercion now works inside tuple expressions.
+- `expr` metavariables can be passed to `cfg`/`cfg!` from declarative macros.
+- Pattern matching against `ManuallyDrop` constants works again (fixes a 1.94 regression).
+- Stabilized inline assembly support for s390x vector registers.
+- **WebAssembly:** undefined linker symbols now produce a hard error instead of being silently converted to Wasm imports. Previously announced; now in effect.
+
+### Stabilized APIs
+
+**Assertions** (live in `core::assert_matches` / `std::assert_matches`, deliberately NOT added to the prelude to avoid colliding with the `assert_matches` crate):
+- `assert_matches!` — assert a value matches a pattern, panicking with the value's `Debug` output otherwise
+- `debug_assert_matches!` — same, compiled out in release like `debug_assert!`
+
+**Conversions**:
+- `impl<T> From<T> for AssertUnwindSafe<T>`
+- `impl<T, F> From<T> for LazyCell<T, F>` — wraps an already-computed value as a `LazyCell` that needs no init closure
+- `impl<T, F> From<T> for LazyLock<T, F>` — same for `LazyLock`
+
+**Copy-able range types** (RFC 3550 — continues the 1.95 `RangeInclusive`/`RangeInclusiveIter` work; these implement `IntoIterator` rather than `Iterator`, so the range value itself is `Copy`):
+- `core::range::Range`, `core::range::RangeIter`
+- `core::range::RangeFrom`, `core::range::RangeFromIter`
+- `core::range::RangeToInclusive`, `core::range::RangeToInclusiveIter`
+
+**NonZero**:
+- Range iteration support for `NonZero` integers — ranges bounded by `NonZero<uN>`/`NonZero<iN>` now iterate. (The underlying `Step` trait remains nightly-only; only the iteration capability is stable.)
+
+### Compiler
+
+- Minimum external LLVM raised to 21.
+- Link relaxation enabled for LoongArch Linux targets.
+- `riscv64gc-unknown-fuchsia` updated to the RVA22 + vector baseline.
+
+### Cargo
+
+- A dependency can now specify a git `repository` and an alternate `registry` at the same time — use the local git checkout during development, publish against the registry.
+- `target.'cfg(..)'.rustdocflags` is now honored in config (rustdoc flags scoped by `cfg`, matching the existing `rustflags` behavior).
+
+### Security
+
+- **CVE-2026-5223** (medium): crate tarball extraction could follow symlinks during unpacking.
+- **CVE-2026-5222** (low): credentials could be sent to a host after URL normalization.
+- Users of crates.io are unaffected by both; the fixes matter for alternate registries and custom tooling.
+
+### Compatibility notes
+
+- WebAssembly undefined linker symbols are now errors (see Language) — wasm targets relying on the old implicit-import behavior must declare imports explicitly.
+- `ManuallyDrop` constant patterns behave correctly again after the 1.94 regression.
+
+---
+
+## Rust 1.97 (2026-07-09)
+
+Source: [releases.rs/docs/1.97.0/](https://releases.rs/docs/1.97.0/) and the draft release notes ([rust-lang/rust#158353](https://github.com/rust-lang/rust/issues/158353)).
+
+### Language
+
+- **`pin!` macro no longer performs deref coercion.** `pin!(x)` where `x: &mut T` now correctly produces `Pin<&mut &mut T>` instead of silently coercing to `Pin<&mut T>`. This is a soundness fix; it affects code that relied on the old, incorrect behavior present since 1.88.0.
+- Enum encoding changed for enums without documented layout guarantees — not a breaking change per the language's guarantees, but the binary layout may differ.
+- Empty `#[export_name = ""]` is now a hard error.
+- Tuple-index shorthand (e.g. numeric shorthand in `Point(x, ..)`) is now syntactically rejected in struct patterns.
+- Stabilized new target features: `div32`, `lam-bh`, `lamcas`, `ld-seq-sa`, `scq`.
+- Stabilized `cfg(target_has_atomic_primitive_alignment)` as a `cfg` predicate.
+- Trailing `self` allowed in `use` import paths in more contexts.
+
+### Stabilized APIs
+
+**Integer bit manipulation** (on all integer types and their `NonZero` equivalents, all `const fn`):
+- `{integer}::isolate_highest_one`, `{integer}::isolate_lowest_one` — keep only the most / least significant set bit
+- `{integer}::highest_one`, `{integer}::lowest_one` — index of the highest / lowest set bit (`Option<u32>` for plain integers, plain `u32` for `NonZero`)
+- `{integer}::bit_width` — minimum number of bits needed to represent the value (`BITS - leading_zeros()`)
+
+**Misc**:
+- `impl Default for RepeatN<A>`
+- `impl Copy for std::ffi::FromBytesUntilNulError`
+- `impl Send for std::fs::File` on the UEFI target
+- `char::is_control` is now `const fn`
+
+### Compiler
+
+- **Symbol mangling switches to the v0 scheme by default.** May break debuggers/profilers that don't understand v0-mangled symbols, and changes backtrace formatting.
+
+### Cargo
+
+- **Stabilized `build.warnings`** config — controls how lint warnings from local packages are treated (useful for enforcing warning-free CI builds).
+- **Stabilized `resolver.lockfile-path`** config — point Cargo at a lockfile located elsewhere (useful for read-only source trees).
+- New `-m` shorthand for `--manifest-path`.
+- `cargo clean` now errors if `--target-dir` doesn't look like an actual Cargo target directory (prevents accidentally deleting unrelated directories).
+- Removed the `curl` dependency from the crates-io crate.
+
+### Rustdoc
+
+- Stabilized the `--emit` flag.
+- Stabilized the `--remap-path-prefix` option.
+
+### Compatibility notes
+
+- v0 symbol mangling by default (see Compiler) — tooling that parses mangled symbols or backtraces may need updates.
+- `pin!` no longer deref-coerces (see Language) — a soundness fix that may change inferred types.
+- Deprecated some `std::char` constants/functions.
+- Removed previously-deprecated `f64` methods.
+- Linker output warnings are now enabled by default.
+- `varargs_without_pattern` lint now reported in dependencies (not just the local crate).
+- Binary crates now lint unused `pub` items.
+- Generic arguments are now rejected for module path segments (previously silently accepted).
+- Mach-O `link_section` specifiers are now validated.
+- `#[link_name]` / `#[link]` parameters are now validated.
+- Windows: writing to a socket after shutdown now produces `BrokenPipe` (maps `WSAESHUTDOWN` correctly) instead of the previous inconsistent behavior.
+
+---
+
+## Rust 1.98 (2026-08-20)
+
+Source: [releases.rs/docs/1.98.0/](https://releases.rs/docs/1.98.0/) and [blog.rust-lang.org/2026/08/20/Rust-1.98.0](https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/). API signatures verified against the 1.98.0 std sources.
+
+### Language
+
+- Allow shortening the lifetime of `&mut` when unsize-coercing, even in an invariant position — e.g. `Cell<&'long mut i32>` now coerces to `Cell<&'short mut dyn Send>`.
+- New deny-by-default `invalid_runtime_symbol_definitions` and warn-by-default `suspicious_runtime_symbol_definitions` lints — flag Rust definitions of core runtime symbols (`memcmp`, `memset`, `strlen`, …).
+- New warn-by-default `c_void_returns` lint — flags `core::ffi::c_void` used as an FFI return type (almost always a mistake for `()`).
+
+### Stabilized APIs
+
+**Strings / slices**:
+- `str::substr_range(&self, substr: &str) -> Option<Range<usize>>` — byte range of a substring **derived from** `self` (pointer arithmetic, no search)
+- `<[T]>::subslice_range(&self, subslice: &[T]) -> Option<core::range::Range<usize>>` — slice counterpart; panics for ZST elements
+- `str::strip_circumfix(prefix, suffix) -> Option<&str>` — strip prefix and suffix in one call (both are `Pattern`s)
+- `<[T]>::strip_circumfix(&prefix, &suffix) -> Option<&[T]>`
+- `String::from_utf16le(v: &[u8])`, `from_utf16le_lossy(v: &[u8]) -> String`, `from_utf16be`, `from_utf16be_lossy` — note the input is **bytes**, unlike `from_utf16(&[u16])`
+
+**Integer formatting**:
+- `core::fmt::NumBuffer` — stack buffer sized for the maximum decimal length of its integer type
+- `{integer}::format_into(self, buf: &mut NumBuffer<Self>) -> &str` — allocation-free integer-to-string (std replacement for the `itoa` crate)
+
+**Floats** (all `const fn`):
+- `{f32,f64}::algebraic_add`, `algebraic_sub`, `algebraic_mul`, `algebraic_div`, `algebraic_rem` — arithmetic that licenses algebraic (fast-math-style) optimizations; results are non-deterministic within a rounding tolerance
+
+**NonZero**:
+- `NonZero<{integer}>::from_str_radix(src: &str, radix: u32) -> Result<Self, ParseIntError>` (`const fn`)
+
+**Option / Result / bool**:
+- `Option::map_or_default(f)`, `Result::map_or_default(f)` — `.map(f).unwrap_or_default()` in one call
+- `bool::ok_or(err) -> Result<(), E>`, `bool::ok_or_else(f)` — bool-to-Result counterpart of `then_some(..).ok_or(..)`
+
+**Atomics** (all atomic types; gated on `cfg(target_has_atomic_primitive_alignment)`):
+- `Atomic*::from_mut(&mut T) -> &mut Self`
+- `Atomic*::from_mut_slice(&mut [T]) -> &mut [Self]`
+- `Atomic*::get_mut_slice(&mut [Self]) -> &mut [T]`
+
+**Box**:
+- `Box::as_ptr(&b) -> *const T`, `Box::as_mut_ptr(&mut b) -> *mut T` — raw pointer without materializing an intermediate reference (associated fns, called as `Box::as_ptr(&b)`)
+
+**Paths**:
+- `PathBuf::into_string(self) -> Result<String, PathBuf>`
+- `Path::is_empty(&self) -> bool`
+
+**Misc**:
+- `Send`/`Sync` for `std::process::CommandArgs`
+- `std::range::legacy` module — re-exports the old `Range`/`RangeFrom`/`RangeTo` under explicit "legacy" names alongside the new `core::range` types
+
+### Clippy (1.98)
+
+New lints: `unnecessary_unwrap_unchecked` (complexity), `chunks_exact_to_as_chunks` (style), `by_ref_peekable_peek` (suspicious), `with_capacity_zero` (pedantic), `manual_isolate_lowest_one` (complexity — suggests the 1.97 `isolate_lowest_one`), `for_unbounded_range` (suspicious), `unused_async_trait_impl` (pedantic). Moved: `empty_enums` pedantic → nursery. Deprecated: `from_iter_instead_of_collect`. See [compiler-cargo.md](compiler-cargo.md) for the code-change implications.
+
+### Platform support
+
+- Promoted to Tier 2: `thumbv7a-none-eabi(hf)`, `thumbv7r-none-eabi(hf)`, `thumbv8r-none-eabihf`.
+- New Tier 3: `powerpc64-unknown-linux-gnuelfv2`, `aarch64-unknown-linux-pauthtest`.
+
+### Compatibility notes
+
+- Stricter `repr(transparent)` rules — combining with `repr(C)`, private fields, and `#[non_exhaustive]` types now rejected in more cases.
+- `derive(Ord)` uses a fast path for `PartialOrd` — can expose latent inconsistent manual `PartialOrd`/`Ord` pairs.
+- Where-bounds of the form `Type = Type` / `Type == Type` are no longer syntactically allowed.
+- Ambiguous glob imports now error in more cases.
+- `str` and `char` `Debug` output escapes more characters — update snapshot tests that assert on `{:?}` output.
+- Windows: thread-local destructors switched to Fiber Local Storage.
+- Fully-elided trait-object lifetime bounds may resolve differently in niche scenarios.
+
+---
+
+## Rust 1.99 (2026-10-01)
+
+Source: [releases.rs/docs/1.99.0/](https://releases.rs/docs/1.99.0/) and [blog.rust-lang.org/2026/10/01/Rust-1.99.0](https://blog.rust-lang.org/2026/10/01/Rust-1.99.0/).
+
+### Language
+
+- **C-variadic function definitions stabilized** for the `C` and `C-unwind` ABIs — Rust code can now *define* (not just call) `extern "C" fn f(x: i32, ...)` using `core::ffi::VaList`, with arguments constrained by the `VaArgSafe` trait. `#[unsafe(naked)]` is also allowed on C-variadic functions.
+- Stabilized custom attributes on outlined modules: `#[my_macro] mod foo;` now works (macro expansion on module declarations).
+- 128-bit integers can be passed in vector registers in x86 `asm!`.
+- Trait methods now resolve on the adjusted never type; coercion from inference variables to trait objects improved.
+- New allow-by-default `raw_borrows_via_references` lint; `unconditional_panic` extended to zero-sized `chunks`/`windows`; unused `#[path]` attributes on inline modules are now linted; POSIX symbols added to the runtime-symbol-definition lints (see 1.98).
+- Documented guarantees: allocation growth behavior, and access to `UnsafeCell` contents without `get()`.
+
+### Stabilized APIs
+
+**Box / Vec raw-handle round-trips** (NonNull-based, complement the raw-pointer forms):
+- `Box::into_non_null`, `Box::from_non_null`
+- `Vec::into_parts` → `(NonNull<T>, usize, usize)`, `Vec::from_parts`
+
+**Collections / iterators**:
+- `impl IntoIterator for Box<[T; N]>` (and `&Box<[T; N]>`, `&mut Box<[T; N]>`) — iterate a boxed array by value
+- `VecDeque::retain_back` — like `retain`, but walks from the back and stops at the first kept element
+- `impl FusedIterator for StepBy<I>`
+
+**Strings**:
+- `String::from_utf8_lossy_owned(Vec<u8>) -> String` — lossy conversion that reuses the allocation when the input is valid UTF-8
+- `string::FromUtf8Error::into_utf8_lossy(self) -> String` — lossy recovery after a failed `String::from_utf8`
+
+**Filesystem**:
+- `std::fs::set_times(path, FileTimes)`, `std::fs::set_times_nofollow` — set file timestamps by path, without opening a `File` (std replacement for the `filetime` crate)
+
+**Layout from raw pointers** (all `unsafe`):
+- `core::mem::size_of_val_raw`, `core::mem::align_of_val_raw`
+- `core::alloc::Layout::for_value_raw`
+
+**FFI**:
+- `core::ffi::VaList` (see Language above)
+
+### Compiler
+
+- LLVM 23.
+- Static position-independent executables enabled on GNU/musl targets.
+- `riscv64-unknown-linux-musl` promoted to Tier 2 with host tools.
+- Method suggestions prefer exact doc-alias matches over similarity matching.
+
+### Cargo
+
+- **New built-in `debug` profile** — currently an alias for `dev`, preparation for renaming the default profile.
+- Edition 2024+ workspace members can override an inherited dependency's `default-features`.
+- **Incremental compilation is disabled by default in CI environments** (detected via `CI` env var) — speeds up cold CI builds and shrinks caches; set `CARGO_INCREMENTAL=1` to restore.
+
+### Rustdoc
+
+- New `unused_footnote_definition` lint.
+- Trait-impl filtering optimized — 20% average (up to 40%) faster doc builds.
+
+### Compatibility notes
+
+- **Legacy numeric modules fully deprecated** — `std::i32::MAX` etc. now warn everywhere; use the associated consts (`i32::MAX`).
+- `no_mangle_generic_items` upgraded to a hard error.
+- References to extern statics are no longer promoted.
+- `#[repr(simd)]` on macro invocations no longer accepted on stable (accidental stabilization fixed).
+- Anonymous lifetimes in associated consts now inferred as `'static`.
+- `Pin::new_unchecked` safety docs tightened; `Box::leak` docs now recommend `Box::into_non_null` over leak-then-free round-trips.
+- Doc-comment code-block attributes that don't apply now generate errors; `doc(cfg())` is ignored when filtering doctests.
+- Macros expanding to semicolons now warn even when the macro comes from another crate.
+
+---
+
+## Rust 1.100 (2026-11-12) — never type and custom allocators
+
+Source: [releases.rs/docs/1.100.0/](https://releases.rs/docs/1.100.0/) and [blog.rust-lang.org/2026/11/12/Rust-1.100.0](https://blog.rust-lang.org/2026/11/12/Rust-1.100.0/). API signatures verified against the 1.100.0 std sources and a 1.100.0 toolchain.
+
+### Language
+
+- **Never type `!` stabilized** — `!` can be named in any type position (`Result<T, !>`, `type Error = !`, `Option<!>`), not only as a function return type. `std::convert::Infallible` becomes a type alias for `!`. See [results.md](results.md).
+- **Never type fallback is `!` on all editions** (was `()` before edition 2024) — a breaking change, see Compatibility notes.
+- **`extern "custom"` stabilized** — ABI for functions with a calling convention unknown to Rust. Definitions must be `unsafe` and `#[unsafe(naked)]`, and can only be called from assembly or across FFI. See [compiler-cargo.md](compiler-cargo.md).
+- New warn-by-default `repeated_reprs` lint — the same `#[repr(..)]` specified more than once.
+- `repr(C, align)` types inside `repr(C, packed)` types: hard error downgraded to the deny-by-default `aligned_fields_in_packed` lint.
+- `dropping_references`, `dropping_copy_types`, and `undropped_manually_drops` now also cover `ptr::drop_in_place`.
+- `unfulfilled_lint_expectations` no longer fires on `#[expect(dead_code)]` inside code covered by a dead parent's diagnostic.
+- Volatile accesses to memory outside the Abstract Machine (MMIO) are allowed to trap.
+
+### Stabilized APIs
+
+**Custom allocators** (see [allocators.md](allocators.md)):
+- `std::alloc::Allocator` — `unsafe trait` with required `allocate` / `deallocate` and provided `allocate_zeroed` / `grow` / `grow_zeroed` / `shrink`; `std::alloc::AllocError`
+- `std::alloc::Global`; `impl Allocator` for `Global`, `System`, `&A`, `&mut A`, and `Box<T, A>` / `Rc<T, A>` / `Arc<T, A>` where `T: Allocator`
+- `Box::new_in`, `Box::from_raw_in`, `Box::from_non_null_in`, `Box::into_raw_with_allocator`, `Box::into_non_null_with_allocator`, `Box::allocator`
+- `Vec::new_in`, `Vec::with_capacity_in`, `Vec::from_raw_parts_in`, `Vec::from_parts_in`, `Vec::into_raw_parts_with_allocator`, `Vec::into_parts_with_allocator`, `Vec::allocator`
+- Not included: `_in` constructors for `Rc`, `Arc`, and other collections, and the fallible `try_*_in` forms — still unstable as `allocator_ext`
+
+**Smart pointers**:
+- `Box::take(boxed) -> (T, Box<MaybeUninit<T>, A>)` — move the value out, keep the allocation
+- `Box::map(this, f: impl FnOnce(T) -> U) -> Box<U, A>` — reuses the allocation when the layouts match
+- `Rc::map` / `Arc::map(this, f: impl FnOnce(&T) -> U)` — reuse only when unique and the layouts match
+
+**Memory and cells**:
+- `core::mem::DropGuard<T, F>` — `DropGuard::new(value, f)`, `DropGuard::dismiss(guard) -> T`, `Deref`/`DerefMut`; runs `f(value)` on drop (std replacement for the `scopeguard` crate)
+- `core::mem::conjure_zst::<T>() -> T` (`const unsafe fn`) — materialize a zero-sized value; panics for non-ZSTs
+- `UnsafeCell::replace`, `UnsafeCell::as_ref_unchecked`, `UnsafeCell::as_mut_unchecked` (all `const unsafe fn`)
+
+**Strings / slices / paths**:
+- `str::trim_prefix(prefix) -> &str`, `str::trim_suffix(suffix) -> &str` — remove an optional affix once (`Pattern` arguments)
+- `<[T]>::trim_prefix(&prefix) -> &[T]`, `<[T]>::trim_suffix(&suffix) -> &[T]`
+- `Path::trim_prefix(base) -> &Path`
+- `impl PartialEq<Cow<'_, [U]>>` for `Vec<T, A>`, `&[T]`, `&mut [T]`
+
+**Collections / primitives**:
+- `Vec::from_fn(length, f: impl FnMut(usize) -> T)`
+- `bool::toggle(&mut self)` (`const fn`)
+- `impl Default for std::sync::Once`
+- `impl AsRef<T> for !`, `impl AsMut<T> for !`
+
+**Windows**:
+- `os::windows::process::CommandExt::show_window(cmd_show: u16)` — sets `STARTUPINFO.wShowWindow`
+- `os::windows::process::ChildExt::main_thread_handle() -> BorrowedHandle<'_>`
+
+### Libraries
+
+- `ENOTSUP` now maps to `io::ErrorKind::Unsupported` — changes behavior on Apple and OpenBSD targets, where it differs from `EOPNOTSUPP` and used to decode as uncategorized. Code that checked `raw_os_error()` for it can match `ErrorKind::Unsupported`.
+- The standard library uses Unicode 18.0.0.
+
+### Compiler
+
+- Stabilized `-Cprofile-sample-use` — sample-based PGO from `perf` profiles, no instrumented build.
+- The next-generation trait solver is enabled by default for the orphan check.
+- The test harness accepts repeated `--test-threads` / `--color` arguments (the last one wins).
+
+### Platform support
+
+- `wasm32-wasip3` promoted to Tier 2.
+- `i686-pc-windows-gnu` demoted to Tier 2 without host tools.
+- New Tier 3: `powerpc64-sony-ps3`.
+
+### Cargo
+
+- **Cargo lint system** — `[lints.cargo]` / `[workspace.lints.cargo]`; new warn-by-default `cargo::unused_dependencies`.
+- **Minimum publish age (dependency cooldowns, RFC 3923)** — `registry.global-min-publish-age`, `registries.<name>.min-publish-age`, `resolver.incompatible-publish-age`.
+- `cargo install` uses the lockfile shipped in the `.crate` by default; `--locked` is a no-op.
+- **New build-dir layout** for intermediate artifacts (`build/<pkg>/<hash>/…` instead of `deps/` and `.fingerprint/`) — tools must locate artifacts through Cargo's JSON messages.
+
+Details for all four in [compiler-cargo.md](compiler-cargo.md).
+
+### Rustdoc
+
+- New `invalid_markdown_table` lint.
+
+### Clippy (1.100)
+
+New lints: `option_zip_none` (suspicious), `needless_nonzero_get` (complexity). `map_unwrap_or` now also suggests `map_or_default`; `unwrap_used`'s `allow-unwrap-in-tests` covers integration tests. See [compiler-cargo.md](compiler-cargo.md).
+
+### Compatibility notes
+
+- **Never type fallback changed to `!` on editions 2015–2021** — code relying on the `()` fallback (for example `f()?;` where `f` returns a generic `T: Default`) fails with `` `!: Default` is not satisfied ``; annotate the type. The `dependency_on_unit_never_type_fallback` lint is removed.
+- **`Infallible` is a type alias for `!`** — separate impls for `Infallible` and `!` now conflict (E0119).
+- Some `Box` impls were generalized over the allocator — may need a `Box<T>` annotation where inference relied on `Global`.
+- Closures capture variables used in `if let` more precisely (like `let`) — may surface new borrow errors.
+- `box` patterns are no longer syntactically allowed, even behind `cfg`.
+- Dyn-compatibility of trait objects is checked in more places.
+- `Iterator::{min, max}` and the `_by_key` variants call different `Ord` methods — observable only for types with inconsistent `Ord` / `PartialOrd` impls.
+- `str::escape_debug` always escapes grapheme extenders — update snapshot tests asserting on `{:?}` output of such text.
+- `let`-`else` respects `macro_rules` `expr` metavariable grouping.
+- `ambiguous_glob_imported_traits` fires in slightly more cases; query-cycle errors are reported in more cases for enums with explicit discriminants.
+- Targets: SSE/AVX on x86 soft-float targets and ABI-altering `-Ctarget-feature` / `-Ctarget-cpu` values on ARM are hard errors; ARMv7-A hard-float targets no longer require `d32` (pass `-Ctarget-feature=+d32` if needed); the x86 "Rust" ABI uses SSE registers when always available; `windows-gnullvm` links `libunwind` statically; Xtensa requires `windowed` and `exception`; WASI SDK 34.
+
+---
+
+## How to use this changelog
+
+- **Looking up when an API stabilized**: skim the "Stabilized APIs" section under each version.
+- **Explaining a compat break**: check "Compatibility notes" for the version the user upgraded through.
+- **MSRV planning**: decide based on which "Stabilized APIs" you'd want — the `rust-version` you need is the max across all of them.
+
+For day-to-day "what modern API replaces this pattern" use, prefer the trigger table in [../SKILL.md](../SKILL.md) and the topic-specific references.

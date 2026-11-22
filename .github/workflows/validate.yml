@@ -1,0 +1,67 @@
+name: validate
+
+on:
+  pull_request: null
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  plugin:
+    name: Validate plugin, hooks, docs, and bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Validate JSON manifests and shell syntax
+        run: |
+          set -euo pipefail
+          jq empty dev-agents/plugin.json
+          jq empty dev-agents/hooks.json
+          jq empty dev-agents/mcp_config.json
+          jq empty dev-agents/.devcontainer/devcontainer.json
+          while IFS= read -r sh; do
+            bash -n "$sh"
+          done < <(find dev-agents .github bench -name '*.sh' -type f)
+
+      - name: Validate with Antigravity CLI (when installed)
+        run: |
+          set -euo pipefail
+          if command -v agy >/dev/null 2>&1; then
+            agy plugin validate --strict --json ./dev-agents
+          else
+            echo "agy CLI not available on runner; running offline schema & consistency checks"
+          fi
+
+      - name: Check cross-file consistency
+        run: bash .github/scripts/check-consistency.sh
+
+      - name: Run hook, docs acceptance, and bench self-tests
+        run: |
+          set -euo pipefail
+          bash .github/scripts/test-hooks.sh
+          bash .github/scripts/test-hooks-rules.sh
+          bash .github/scripts/test-docs-acceptance.sh
+          bash bench/selftest.sh
+
+      - name: Check version consistency
+        run: |
+          set -euo pipefail
+          plugin=$(jq -r .version dev-agents/plugin.json)
+          changelog=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' dev-agents/CHANGELOG.md | tr -d '#[] ')
+          badge_root=$(grep -oE 'version-[0-9]+\.[0-9]+\.[0-9]+-blue' README.md | head -1 | sed -E 's/version-(.*)-blue/\1/')
+          badge_plugin=$(grep -oE 'version-[0-9]+\.[0-9]+\.[0-9]+-blue' dev-agents/README.md | head -1 | sed -E 's/version-(.*)-blue/\1/')
+          echo "plugin.json=$plugin changelog=$changelog badge.root=$badge_root badge.plugin=$badge_plugin"
+          for v in "$changelog" "$badge_root" "$badge_plugin"; do
+            if [[ "$v" != "$plugin" ]]; then
+              echo "Version mismatch: expected $plugin, found $v" >&2
+              exit 1
+            fi
+          done

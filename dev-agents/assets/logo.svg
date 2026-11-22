@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Dev Agents">
+  <defs>
+    <linearGradient id="bg" x1="14" y1="14" x2="114" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="55%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="28" y1="28" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0F2FE"/>
+      <stop offset="100%" stop-color="#93C5FD"/>
+    </linearGradient>
+  </defs>
+  <rect x="14" y="14" width="100" height="100" rx="24" fill="url(#bg)"/>
+  <rect x="16" y="16" width="96" height="96" rx="22" fill="none" stroke="url(#ring)" stroke-opacity="0.35" stroke-width="2"/>
+  <!-- Orchestration nodes -->
+  <line x1="64" y1="36" x2="40" y2="82" stroke="#BAE6FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="64" y1="36" x2="88" y2="82" stroke="#BAE6FD" stroke-width="4" stroke-linecap="round"/>
+  <line x1="40" y1="82" x2="88" y2="82" stroke="#BAE6FD" stroke-width="4" stroke-linecap="round"/>
+  <!-- Center code chevrons -->
+  <path d="M55 60 L49 66 L55 72 M73 60 L79 66 L73 72 M67 58 L61 74" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Nodes -->
+  <circle cx="64" cy="36" r="9" fill="#FFFFFF"/>
+  <circle cx="64" cy="36" r="4" fill="#2563EB"/>
+  <circle cx="40" cy="82" r="8" fill="#FFFFFF"/>
+  <circle cx="40" cy="82" r="3.5" fill="#0EA5E9"/>
+  <circle cx="88" cy="82" r="8" fill="#FFFFFF"/>
+  <circle cx="88" cy="82" r="3.5" fill="#1D4ED8"/>
+</svg>

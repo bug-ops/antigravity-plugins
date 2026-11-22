@@ -1,0 +1,230 @@
+# String and char APIs
+
+## `str::floor_char_boundary(usize)` / `str::ceil_char_boundary(usize)` — 1.91
+
+**Replaces:** manual loops finding UTF-8 byte boundaries for safe truncation.
+
+### The problem
+
+Slicing `&str` requires byte indices that fall on character boundaries. Blindly slicing at byte N panics if N is mid-character. Classic use cases: truncating to a display/protocol byte limit (Telegram 4096 chars, Discord 2000 chars, SMS 160 bytes, UI rendering).
+
+### Usage
+
+```rust
+let s = "café";  // 5 bytes: c, a, f, 0xc3, 0xa9
+
+// floor_char_boundary: rounds DOWN to the nearest char boundary
+assert_eq!(s.floor_char_boundary(4), 3);  // byte 4 is mid-char, round down to 3
+let safe = &s[..s.floor_char_boundary(4)]; // "caf"
+
+// ceil_char_boundary: rounds UP
+assert_eq!(s.ceil_char_boundary(4), 5);
+let safe = &s[..s.ceil_char_boundary(4)]; // "café" (the full string)
+
+// If the index is already on a boundary, it's returned as-is
+assert_eq!(s.floor_char_boundary(3), 3);
+assert_eq!(s.ceil_char_boundary(3), 3);
+
+// Out-of-range: clamps to len() rather than panicking
+assert_eq!(s.floor_char_boundary(100), s.len());
+```
+
+### Migration example
+
+```rust
+// Before — verbose and easy to get wrong
+fn truncate_utf8(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
+// After (1.91+)
+fn truncate_utf8(s: &str, max_bytes: usize) -> &str {
+    &s[..s.floor_char_boundary(max_bytes)]
+}
+```
+
+### When to use which
+
+- **`floor_char_boundary`** for truncation ("show at most N bytes"): always gives you ≤ N bytes.
+- **`ceil_char_boundary`** for splitting/pagination where you'd rather include the partial char than split it: always gives you ≥ N bytes (or the full length if you'd exceed it).
+
+## `char::MAX_LEN_UTF8` / `char::MAX_LEN_UTF16` — 1.93
+
+**Replaces:** the magic numbers `4` and `2`.
+
+```rust
+// Before
+let mut buf = [0u8; 4];  // max UTF-8 encoding length
+
+// After (1.93+)
+let mut buf = [0u8; char::MAX_LEN_UTF8];
+```
+
+Small change, but makes intent explicit in code that does UTF encoding/decoding.
+
+## `<[T]>::array_windows::<N>() -> impl Iterator<Item = &[T; N]>` — 1.94
+
+**Replaces:** `slice.windows(N)` where N is a compile-time constant.
+
+### Why it's better than `.windows(N)`
+
+`windows(N)` returns `&[T]` — a slice of runtime-known length N. You lose the type-level info. To index safely you still need length-matched indexing.
+
+`array_windows::<N>()` returns `&[T; N]` — an array reference of exactly N elements. Direct field access by index, no panics possible.
+
+```rust
+let xs = [1, 2, 3, 4, 5];
+
+// Before — slice, length known only at runtime
+for w in xs.windows(3) {
+    // w: &[i32] — even though we know it's length 3, the type doesn't
+    println!("{} {} {}", w[0], w[1], w[2]);  // bounds checks
+}
+
+// After (1.94+) — array, length known at compile time
+for w in xs.array_windows::<3>() {
+    let [a, b, c] = w;  // destructure directly
+    println!("{a} {b} {c}");  // no bounds checks needed
+}
+```
+
+### Relation to `as_chunks` (1.88)
+
+`array_chunks::<N>` / `as_chunks::<N>` was already stable — those are non-overlapping chunks. `array_windows` is the sliding (overlapping) variant. Pick based on whether windows overlap.
+
+### Common use sites
+
+- **N-gram analysis** (NLP, token windowing)
+- **Delta analysis** (`array_windows::<2>()` to compute pairwise diffs)
+- **Stateful parsers** with lookahead of fixed size
+- **SIMD**: `array_windows::<4>()` or `::<8>()` lets you feed a fixed-size view into a vectorized kernel
+
+## `str::strip_circumfix(prefix, suffix) -> Option<&str>` — 1.98
+
+**Replaces:** the chained `strip_prefix(..).and_then(|s| s.strip_suffix(..))` pattern.
+
+```rust
+// Before
+let inner = s.strip_prefix("${").and_then(|s| s.strip_suffix('}'));
+
+// After (1.98+)
+let inner = s.strip_circumfix("${", '}');
+
+assert_eq!("bar:hello:foo".strip_circumfix("bar:", ":foo"), Some("hello"));
+assert_eq!("foo:bar;".strip_circumfix("foo:", ';'), Some("bar"));
+```
+
+Returns `None` if the prefix is missing, the suffix is missing, **or the two overlap** — the overlap check is the part hand-rolled versions usually get wrong (`"aba".strip_circumfix("ab", "ba")` is `None`, not a panic or a bogus slice). Both arguments are `Pattern`s (`&str`, `char`, `&[char]`, or a closure). A slice counterpart `<[T]>::strip_circumfix(&prefix, &suffix) -> Option<&[T]>` exists with the same semantics.
+
+Common sites: delimiter unwrapping (`"..."`, `(...)`, `${...}`), protocol framing, template markers.
+
+## `str::substr_range(&self, substr: &str) -> Option<Range<usize>>` — 1.98
+
+**Recover the byte range of a substring that was derived from `self` — without searching.**
+
+Unlike `find`, this uses pointer arithmetic: it answers "where in the original string does this borrowed piece sit", not "where does this text first occur". That distinction matters when the text occurs more than once.
+
+```rust
+let data = "a, b, b, a";
+
+// Before — find() locates the FIRST occurrence, wrong for repeated tokens
+let mut ranges = data.split(", ").map(|s| data.find(s).unwrap()..); // "b" → 3, both times
+
+// After (1.98+) — exact provenance-based position of each piece
+let mut iter = data.split(", ").map(|s| data.substr_range(s).unwrap());
+// 0..1, 3..4, 6..7, 9..10 — the second "b" and "a" map to their real positions
+```
+
+Returns `None` if `substr` was not derived from `self`. Zero-length inputs pointing exactly at the start/end of an unrelated string can produce false positives (`Some(0..0)` / `Some(len..len)`). Typical use: span reporting in parsers built on `split`/`trim`/`strip_*`, where you need offsets for diagnostics but the combinators only hand back subslices. The slice counterpart is `<[T]>::subslice_range` (see [slices.md](slices.md)).
+
+## `String::from_utf16le` / `from_utf16be` (+ `_lossy`) — 1.98
+
+**Decode UTF-16 with explicit endianness directly from bytes.**
+
+```rust
+// Before — manual widening, endianness easy to get wrong
+let units: Vec<u16> = bytes.chunks_exact(2)
+    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+    .collect();
+let s = String::from_utf16(&units)?;
+
+// After (1.98+)
+let s = String::from_utf16le(bytes)?;          // Result<String, FromUtf16Error>
+let s = String::from_utf16le_lossy(bytes);     // String, invalid data → U+FFFD
+```
+
+Note the input type: the LE/BE variants take `&[u8]` (raw bytes), while the native `from_utf16` takes `&[u16]`. This removes the intermediate `Vec<u16>` allocation and the `chunks_exact` boilerplate. Common sites: Windows file formats and registry data, JVM class files, USB string descriptors, wire protocols with declared endianness.
+
+## `String::from_utf8_lossy_owned(Vec<u8>)` — 1.99
+
+**Lossy UTF-8 conversion that takes ownership — no copy when the input is already valid.**
+
+```rust
+// Before — Cow borrows from the Vec, so into_owned() always copies valid input
+let s = String::from_utf8_lossy(&bytes).into_owned();
+
+// After (1.99+) — valid input: buffer reused, zero-copy; invalid: replaced with U+FFFD
+let s = String::from_utf8_lossy_owned(bytes);
+```
+
+The borrowing `from_utf8_lossy(&[u8]) -> Cow<str>` stays the right call when you only need a view. Reach for the owned variant exactly when you have a `Vec<u8>` you're done with and the result must be a `String` — log ingestion, subprocess output, network payloads.
+
+## `FromUtf8Error::into_utf8_lossy()` — 1.99
+
+**Recover lossily after a failed strict conversion — without re-validating.**
+
+```rust
+// Before — the error path re-reads the bytes from scratch
+let s = String::from_utf8(bytes.clone())
+    .unwrap_or_else(|_| String::from_utf8_lossy(&bytes).into_owned());
+
+// After (1.99+) — the error already owns the bytes and knows where validation stopped
+let s = String::from_utf8(bytes).unwrap_or_else(|e| e.into_utf8_lossy());
+```
+
+Kills both the `clone` and the second validation pass. This is the idiomatic "strict if possible, lossy otherwise" pipeline as of 1.99.
+
+## `str::trim_prefix` / `str::trim_suffix` — 1.100
+
+**Remove an optional prefix or suffix at most once — replaces `strip_prefix(p).unwrap_or(s)`.**
+
+```rust
+// Before
+let version = tag.strip_prefix('v').unwrap_or(tag);
+let stem = file.strip_suffix(".rs").unwrap_or(file);
+// or the subtly wrong spelling — removes EVERY repetition
+let version = tag.trim_start_matches('v');
+
+// After (1.100+)
+let version = tag.trim_prefix('v');
+let stem = file.trim_suffix(".rs");
+let url = raw.trim_prefix('<').trim_suffix('>'); // chains — always returns &str
+```
+
+The difference from `trim_start_matches` / `trim_end_matches` is the count: `"foofoo".trim_prefix("foo")` is `"foo"`, while `trim_start_matches("foo")` strips both and returns `""`. Both arguments are `Pattern`s (`&str`, `char`, `&[char]`, or a closure).
+
+Picking between the four families:
+
+| Need | Use |
+|---|---|
+| Affix is optional, remove once | `trim_prefix` / `trim_suffix` (1.100) |
+| Absence is an error or a branch | `strip_prefix` / `strip_suffix` → `Option` |
+| Both delimiters must be present | `strip_circumfix` (1.98) |
+| Remove all repetitions | `trim_start_matches` / `trim_end_matches` |
+
+Slices and `Path` got the same methods — see [slices.md](slices.md) and [paths.md](paths.md).
+
+## `<[T]>::ceil_char_boundary` parallel for slices
+
+There's no slice equivalent — `ceil_char_boundary`/`floor_char_boundary` are `str`-specific because they rely on UTF-8 invariants.
+
+## Related note: `unicode-width` is still separate
+
+None of these replace the `unicode-width` / `unicode-segmentation` crates. If you need display width (e.g., for aligning terminal output with wide characters like CJK or emojis), you still need those crates. `floor_char_boundary` gives you safe byte-level cutoffs, not grapheme- or width-aware cutoffs.

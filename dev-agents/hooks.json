@@ -1,0 +1,17 @@
+{
+  "dev-agents-guard": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "edit_file|write_file|write_to_file|replace_file_content|multi_replace_file_content|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ./scripts/guard.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

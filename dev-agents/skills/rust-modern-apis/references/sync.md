@@ -1,0 +1,311 @@
+# Synchronization and lazy init APIs
+
+## `AtomicPtr` / `AtomicBool` / `AtomicIsize` / `AtomicUsize` — `update` / `try_update` — 1.95
+
+**Closure-driven CAS update — replaces the canonical `compare_exchange_weak` loop.**
+
+```rust
+use std::sync::atomic::{AtomicUsize, Ordering::*};
+
+let counter = AtomicUsize::new(0);
+
+// Before — verbose CAS loop, easy to get orderings wrong
+let mut cur = counter.load(Acquire);
+loop {
+    let next = cur + 1;
+    match counter.compare_exchange_weak(cur, next, AcqRel, Acquire) {
+        Ok(_) => break,
+        Err(c) => cur = c,
+    }
+}
+
+// After (1.95+) — closure runs until success, orderings stated once
+let prev = counter.update(AcqRel, Acquire, |c| c + 1);
+```
+
+`update` takes the success and failure orderings plus an `FnMut(T) -> T` and retries internally on contention. It returns the previous value.
+
+`try_update` takes `FnMut(T) -> Option<T>` and aborts if the closure returns `None` — useful when the update is conditional:
+
+```rust
+// Increment only if under a cap
+let result: Result<usize, usize> = counter.try_update(AcqRel, Acquire, |c| {
+    (c < CAP).then_some(c + 1)
+});
+```
+
+### When to prefer
+
+Always prefer `update`/`try_update` over hand-rolled `compare_exchange_weak` loops when:
+- The update is pure (no side effects inside the loop — the closure may be called multiple times under contention).
+- You want the success/failure ordering pair to be visible at one site instead of buried in the loop.
+
+Stick with manual CAS when:
+- The update needs to observe intermediate state (e.g., logging each retry).
+- You want explicit control of weak vs. strong CAS.
+- You need the loop body to do something other than recompute the new value.
+
+### Available on
+
+All atomic types: `AtomicPtr<T>`, `AtomicBool`, and every atomic integer (`AtomicI8`–`AtomicI64`, `AtomicU8`–`AtomicU64`, `AtomicIsize`/`AtomicUsize`). The 1.95 release announcement listed only the ptr/bool/size types, but the fixed-width integer atomics carry the same `since = "1.95.0"` stabilization — verified against the std sources.
+
+## Atomic `from_mut` / `from_mut_slice` / `get_mut_slice` — 1.98
+
+**Safe in-place reinterpretation between plain values and their atomic counterparts — replaces `unsafe` transmutes.**
+
+```rust
+use std::sync::atomic::{AtomicU32, Ordering::*};
+
+// Before — worked, but required unsafe and a layout argument in a comment
+let a: &AtomicU32 = unsafe { &*(v as *mut u32 as *const AtomicU32) };
+
+// After (1.98+)
+let a: &mut AtomicU32 = AtomicU32::from_mut(v);            // &mut u32 → &mut AtomicU32
+let s: &mut [AtomicU32] = AtomicU32::from_mut_slice(vals); // &mut [u32] → &mut [AtomicU32]
+let back: &mut [u32] = AtomicU32::get_mut_slice(atomics);  // &mut [AtomicU32] → &mut [u32]
+```
+
+The killer use case is phased parallelism: build a `Vec<u32>` single-threaded, view it as `&[AtomicU32]` for a parallel phase (e.g. rayon workers doing `fetch_add`), then read it back as plain integers — no copies, no `unsafe`, no committing the whole struct to atomic types.
+
+Available on all atomic types, gated on `cfg(target_has_atomic_primitive_alignment = "...")` — the plain type and the atomic must have the same alignment (true on mainstream 64-bit targets; `AtomicU64::from_mut` is absent on 32-bit x86, where `u64` is 4-byte-aligned).
+
+## `Box::as_ptr` / `Box::as_mut_ptr` — 1.98
+
+**Raw pointer to the boxed value without materializing an intermediate reference.**
+
+```rust
+// Before — creates a &mut on the way, which asserts uniqueness to the aliasing model
+let p: *mut T = &mut *boxed as *mut T;
+
+// After (1.98+) — associated fns (called through the type, like Box::leak)
+let p: *const T = Box::as_ptr(&boxed);
+let p: *mut T = Box::as_mut_ptr(&mut boxed);
+```
+
+Matters for FFI and self-referential setups: the returned pointer is derived without an intermediate `&`/`&mut`, so under Stacked/Tree Borrows it doesn't invalidate other outstanding raw pointers to the same allocation the way a fresh `&mut *boxed` does. For casual "pass a pointer to C and forget it" code, either spelling works — but the new one is shorter and Miri-friendlier.
+
+## `Box::into_non_null` / `Box::from_non_null` — 1.99
+
+**`NonNull` round-trip for owned heap allocations — replaces `into_raw` + `new_unchecked`.**
+
+```rust
+// Before — the non-nullness of Box's pointer re-asserted manually
+let ptr: NonNull<T> = unsafe { NonNull::new_unchecked(Box::into_raw(b)) };
+let b: Box<T> = unsafe { Box::from_raw(ptr.as_ptr()) };
+
+// After (1.99+)
+let ptr: NonNull<T> = Box::into_non_null(b);
+let b: Box<T> = unsafe { Box::from_non_null(ptr) };
+```
+
+A `Box` pointer is never null, so `into_non_null` is safe and the invariant lives in the type. The 1.99 docs also explicitly recommend this pair over `Box::leak` round-trips ("leak then reconstruct to free") — leak-based patterns interact badly with compiler optimizations and custom allocators. `Vec` got the same treatment via `into_parts`/`from_parts` (see [collections.md](collections.md)).
+
+## `Box::take` — 1.100
+
+**Move the value out of a `Box` and keep the allocation for the next value.**
+
+```rust
+// Before — the allocation is freed, then a fresh one is requested
+let value = *boxed;
+let boxed = Box::new(next);
+
+// After (1.100+)
+let (value, slot) = Box::take(boxed); // slot: Box<MaybeUninit<T>>
+let boxed = Box::write(slot, next);   // same allocation, no allocator call
+```
+
+Associated function: `Box::take(b)`, returning `(T, Box<MaybeUninit<T>, A>)`. Pairs with `Box::write` (1.87). Useful in loops that repeatedly replace a large boxed state, and for pooling boxes of one type.
+
+## `Box::map` / `Rc::map` / `Arc::map` — 1.100
+
+**Transform the pointee and re-wrap it, reusing the allocation when the layouts match.**
+
+```rust
+// Before — free + allocate on every transition
+let next: Box<Running> = Box::new(start(*idle));
+
+// After (1.100+)
+let next: Box<Running> = Box::map(idle, start);
+
+let len: Rc<usize> = Rc::map(text, |s: &String| s.len());
+let shown: Arc<String> = Arc::map(num, |n: &i32| n.to_string());
+```
+
+All three are associated functions (`Box::map(b, f)`, not `b.map(f)`).
+
+- `Box::map(this, f: impl FnOnce(T) -> U) -> Box<U, A>` passes the value by ownership and reuses the allocation when `T` and `U` have the same size and alignment; otherwise it frees and allocates.
+- `Rc::map` / `Arc::map` take `f: impl FnOnce(&T) -> U` — the closure only gets a reference, because the pointer may be shared. The allocation is reused only when the pointer is unique *and* the layouts match; otherwise a new `Rc`/`Arc` is allocated and the old one is released.
+
+Good fit for typestate transitions between same-sized states and in-place AST rewriting (`Box<Expr>` → `Box<Expr>`). The fallible `try_map` variants remain unstable.
+
+## `impl Default for Once` — 1.100
+
+`std::sync::Once` now implements `Default` (same as `Once::new()`), so a struct holding one can use `#[derive(Default)]` instead of a manual impl:
+
+```rust
+#[derive(Default)]
+struct Registry {
+    init: Once,
+    entries: Vec<Entry>,
+}
+```
+
+## `LazyLock::get` / `LazyCell::get` — 1.94
+
+**Check initialization without forcing it.**
+
+```rust
+static COUNTER: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
+
+// Before — no way to peek at state, always triggered init
+let c = &*COUNTER;  // forces init
+
+// After (1.94+)
+if let Some(c) = COUNTER.get() {
+    // only true if something else already initialized it
+    *c.lock().unwrap() += 1;
+}
+```
+
+Useful for diagnostics, conditional shutdown logic, and avoiding accidental eager initialization in test code.
+
+## `LazyLock::get_mut` / `LazyCell::get_mut` — 1.94
+
+**Mutable access to the cached value if already initialized, without forcing init.**
+
+Returns `Option<&mut T>` rather than `&mut T` (the non-`get` version forces init and returns `&T`).
+
+```rust
+// Repopulate or clear a cache only if it was ever populated
+if let Some(cache) = LAZY_CACHE.get_mut() {
+    cache.clear();
+}
+```
+
+Note: `get_mut` requires `&mut LazyLock<T>`, so it's mostly useful for `LazyLock` fields in structs (not globals).
+
+## `LazyLock::force_mut` / `LazyCell::force_mut` — 1.94
+
+**Force initialization AND return `&mut T`.** Combines `force()` + `get_mut().unwrap()`.
+
+```rust
+// Before
+let _ = LazyLock::force(&mut lazy);
+let val: &mut T = lazy.get_mut().unwrap();
+
+// After (1.94+)
+let val: &mut T = lazy.force_mut();
+```
+
+## `From<T> for LazyCell<T>` / `From<T> for LazyLock<T>` — 1.96
+
+**Wrap an already-computed value as a `LazyCell`/`LazyLock` with no init closure.**
+
+```rust
+// Before — a closure that just hands back a value you already have
+let cell = LazyLock::new(move || precomputed);
+
+// After (1.96+)
+let cell = LazyLock::from(precomputed);
+```
+
+Useful when a field is typed `LazyLock<T, F>` for the general case, but a particular constructor (or a test) already holds the value and has nothing to defer. The resulting lock is effectively pre-initialized: the first deref returns the stored value without running init. The `F` parameter is still part of the type, but its closure is never called.
+
+Reach for it only when you genuinely have the value up front. If the whole point was to defer an expensive computation, keep `new(closure)`.
+
+## `RwLockWriteGuard::downgrade` — 1.92
+
+**Atomically convert an exclusive write lock to a shared read lock.**
+
+```rust
+use std::sync::RwLock;
+
+let lock = RwLock::new(HashMap::new());
+
+{
+    let mut write = lock.write().unwrap();
+    write.insert("key", "value");
+
+    // Before — drop write, re-acquire read, but another writer could sneak in
+    drop(write);
+    let read = lock.read().unwrap();
+
+    // After (1.92+) — atomic downgrade, no window for other writers
+    let read = RwLockWriteGuard::downgrade(write);
+    // read is now a RwLockReadGuard over the same data
+}
+```
+
+### Important caveat
+
+**Only available on `std::sync::RwLock`.** Not on:
+
+- `tokio::sync::RwLock` — completely different lock type for async contexts
+- `parking_lot::RwLock` — has its own `RwLockWriteGuard::downgrade` with similar semantics but a different import path
+- `async-lock::RwLock`, `async-std::sync::RwLock` — separate ecosystems
+
+Before suggesting `downgrade`, check the import. Most async Rust code uses `tokio::sync::RwLock`, where this does NOT apply.
+
+## `Box::new_zeroed` / `Rc::new_zeroed` / `Arc::new_zeroed` — 1.92
+
+## `Box::new_zeroed_slice` / `Rc::new_zeroed_slice` / `Arc::new_zeroed_slice` — 1.92
+
+**Allocate zero-initialized memory on the heap without an intermediate stack buffer.**
+
+```rust
+// Before — creates on stack, copies to heap
+let big: Box<[u8; 1_000_000]> = Box::new([0; 1_000_000]);  // stack overflow risk!
+
+// After (1.92+) — allocates zeroed directly on the heap
+let big: Box<MaybeUninit<[u8; 1_000_000]>> = Box::new_zeroed();
+let big = unsafe { big.assume_init() };  // now Box<[u8; ...]>
+```
+
+### Key points
+
+- Returns `Box<MaybeUninit<T>>`, not `Box<T>`. You must `assume_init` (unsafe) once you've confirmed the zero bit pattern is valid for `T`.
+- Valid `T`s: types where all-zero is a valid value — integer types, `bool` (true for `false`), `Option<NonZero*>` (zeros to `None`), tuples/arrays/structs of these.
+- Invalid `T`s: references (null is UB), `NonZero*` directly, enums without a zero discriminant.
+- **For `unsafe_code = "deny"` projects**, this API is still useful for the slice form with primitives:
+
+```rust
+// Useful even under deny(unsafe_code):
+let tensor_buf: Box<[f32]> = Box::new_zeroed_slice(1_000_000);
+let tensor_buf = unsafe { tensor_buf.assume_init() };
+// Only one unsafe block; the alternative required manual allocation or vec![0.0; N].into_boxed_slice()
+// which zeroes via memset anyway, but goes through Vec first.
+```
+
+For deeply `unsafe_code = "deny"` codebases, `vec![0.0; n].into_boxed_slice()` is still the simplest alternative (the compiler optimizes the zero-fill to `memset`).
+
+## `Default` for `Pin<Box<T>>` / `Pin<Rc<T>>` / `Pin<Arc<T>>` — 1.91
+
+`Pin::default()` now works if the underlying `Box<T>`/`Rc<T>`/`Arc<T>` implements `Default`.
+
+```rust
+// Before
+let p: Pin<Box<MyFuture>> = Box::pin(MyFuture::default());
+
+// After (1.91+)
+let p: Pin<Box<MyFuture>> = Default::default();
+```
+
+Small convenience. Mostly useful when types are inferred (e.g., `Self::default()` in a struct that contains a pinned field).
+
+## `std::sync::Once::wait` / `Once::wait_force` — 1.86
+
+## `OnceLock::wait` — 1.86
+
+Block until a `Once` completes initialization (without triggering it from this thread). `wait_force` also panics if init fails.
+
+Niche. Useful for coordinating initialization across many threads where non-leader threads want to block on leader completion.
+
+## Tokio/parking_lot equivalents
+
+If you're using `tokio::sync` or `parking_lot`, none of these std additions apply directly. Those crates have their own analogs:
+
+- `parking_lot::OnceCell`, `parking_lot::RwLock::downgrade` (preexisting)
+- `tokio::sync::OnceCell`
+- `once_cell::sync::Lazy` — legacy, replaced by std `LazyLock` since 1.80
+
+For projects with mixed sync and async code, keep the std versions for sync-only code paths.

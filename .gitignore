@@ -1,0 +1,32 @@
+# Local development and working documents
+.local/
+
+# Benchmark run output
+bench/results/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Temporary files
+*.tmp
+*.log
+
+# DevContainer cache
+.cache/
+sccache/
+
+# Docker volumes
+.docker/
