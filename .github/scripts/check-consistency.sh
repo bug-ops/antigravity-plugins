@@ -30,11 +30,18 @@ for skill_dir in "$plugin"/skills/*/; do
   ((body_bytes <= 24000)) || fail "$skill_md body is $body_bytes bytes (>24000 byte limit)"
 done
 
-# 3. Verify every agent filename matches frontmatter `name` and referenced skills exist
+# 3. Verify every agent filename matches frontmatter `name`, declares required `tools`, and referenced skills exist
 for agent_md in "$plugin"/agents/*.md; do
   base=$(basename "$agent_md" .md)
   fm_name=$(awk 'BEGIN{n=0}/^---/{n++;if(n==2)exit;next}n==1&&/^name:/{sub(/^name:[[:space:]]*/,"");print;exit}' "$agent_md")
   [[ $fm_name == "$base" ]] || fail "$agent_md frontmatter name '$fm_name' != filename '$base'"
+  agent_tools=$(awk 'BEGIN{n=0;in_t=0}/^---/{n++;if(n==2)exit;next}n==1&&/^tools:/{in_t=1;next}n==1&&in_t&&/^[A-Za-z]/{in_t=0}n==1&&in_t&&/^[[:space:]]*-/{sub(/^[[:space:]]*-[[:space:]]*/,"");print}' "$agent_md")
+  for req_tool in read_file write_file edit_file run_command; do
+    grep -qxF "$req_tool" <<<"$agent_tools" || fail "$agent_md frontmatter tools missing '$req_tool'"
+  done
+  if [[ $base == live-tester || $base == researcher ]]; then
+    grep -qxF "invoke_subagent" <<<"$agent_tools" || fail "$agent_md frontmatter tools missing 'invoke_subagent'"
+  fi
   while IFS= read -r sp; do
     [[ -z $sp ]] && continue
     [[ -f "$plugin/$sp/SKILL.md" ]] || fail "$agent_md references missing skill '$sp'"

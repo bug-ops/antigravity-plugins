@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Declare explicit `tools` allowlists in all 15 custom agent frontmatters (`read_file`, `write_file`, `edit_file`, `run_command`, `search_web`, `manage_task`, `schedule`, plus `invoke_subagent` and `manage_subagents` on `live-tester` and `researcher`) so spawned subagents can write `.local/handoff/` artifacts, run verification/scanner commands, and spawn `sdd-orchestrator`.
+
 ## [1.0.0] - 2026-11-22
 
 ### Added

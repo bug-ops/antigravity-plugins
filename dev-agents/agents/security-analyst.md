@@ -15,6 +15,14 @@ model: pro
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox
+tools:
+  - read_file
+  - write_file
+  - edit_file
+  - run_command
+  - search_web
+  - manage_task
+  - schedule
 inheritMcp: true
 inheritCustomizations: true
 skills:
