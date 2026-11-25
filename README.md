@@ -16,13 +16,14 @@ Language-agnostic development agents and workflows covering the full software li
 
 **Key features**:
 - **15 custom agents** (`pro` for deep reasoning roles; `inherit` for execution roles) usable both as primary agents (`agy --agent <name>`) and background subagents (`invoke_subagent`)
-- **21 productivity skills**:
+- **22 productivity skills**:
   - `stack` — Stack detection and per-language reference loader (Rust, TypeScript, Luau/Lua)
   - `team-develop` — Multi-agent development orchestration across 10 task chains (`new-feature`, `spec-driven`, `task-loop`, `bug-fix`, `refactoring`, `security`, `docs`, `dependency`, `performance`, `ci-cd`) with mandatory critic and review gates
   - `team-debug` — Multi-agent root cause investigation (`debugger` + conditional `live-tester` → parallel security/arch/perf review → `code-reviewer` consolidation)
   - `team-lead` — Shared lead protocol for Antigravity native subagents (`invoke_subagent`, `send_message`, `manage_subagents`, reactive wakeup)
   - `agent-handoff` — Compact file-based inter-agent handoff protocol in `.local/handoff/`
   - `solve-issue` & `triage-and-solve` — Priority triage, dependency grouping, worktree/branch setup, and end-to-end GitHub issue resolution
+  - `github-issues` — Shared GitHub issue mechanics: capability detection, types, relations, statuses, duplicate search, closing, artifacts
   - `continuous-improvement` — Read-only CI audit cycle (`live-tester` + `researcher` + `arch-analyst` + `security-analyst`), compatible with interactive sessions, `agy -p`, and `/schedule`
   - `live-testing`, `research-protocol`, `arch-inspect`, `security-audit` — Standalone and cycle audit protocols
   - `init-project` — Scaffolds `.local/`, `.agents/rules/`, and `.agents/skills/verify/SKILL.md`
@@ -113,7 +114,7 @@ antigravity-plugins/
     ├── scripts/                   # guard.sh, mcpls-lsp.sh, rust-lsp.sh, lua-lsp.sh (0755)
     ├── .devcontainer/             # Containerized dev environment
     ├── agents/                    # 15 custom agent definitions (<name>.md)
-    └── skills/                    # 21 skills + stack/references/{rust,typescript,luau}/
+    └── skills/                    # 22 skills + stack/references/{rust,typescript,luau}/
 ```
 
 ## Validation & Testing

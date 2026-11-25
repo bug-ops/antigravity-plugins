@@ -76,5 +76,5 @@ Reduced chains reuse Preflight, Step 0 classification, the `team-lead` spawn pro
 3. Spawn `sdd-orchestrator` in Non-Interactive Mode to write `specs/{feature-slug}/` (`spec.md`, `plan.md` with Contracts, `tasks.md`; BRD/SRS/NFR only when requested or new system; delta file per `sdd` Delta Model if capability spec exists).
 4. Spawn `code-reviewer` (`reviewer`) to audit completeness, traceability, testability, links, and YAML validity.
 5. Step 8 fix cycle routes to `sdd-orchestrator` (if scope is fundamentally broken, loop back to `architect` → `critic` → `sdd-orchestrator`).
-6. Commit and PR `specs/{feature-slug}/` only (`spec({feature-slug}): add specification`), then open a follow-up implementation issue via `gh issue create` linking the spec PR and recommending `/solve-issue` (`new-feature` chain).
+6. Commit and PR `specs/{feature-slug}/` only (`spec({feature-slug}): add specification`), then open a follow-up implementation issue via `gh issue create` (using `--type Feature` when the repository has types, per [github-issues](../../github-issues/SKILL.md)) linking the spec PR and recommending `/solve-issue` (`new-feature` chain).
 7. Terminate all subagents via `manage_subagents`.

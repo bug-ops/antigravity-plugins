@@ -3,7 +3,7 @@
   "name": "dev-agents",
   "displayName": "Dev Agents",
   "version": "1.0.0",
-  "description": "15 specialist software engineering agents and 21 workflow skills with Rust, TypeScript, and Luau/Lua stack profiles, MCP-LSP intelligence via mcpls, and safety hooks.",
+  "description": "15 specialist software engineering agents and 22 workflow skills with Rust, TypeScript, and Luau/Lua stack profiles, MCP-LSP intelligence via mcpls, and safety hooks.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
     "Initialize this project for dev-agents with /init-project",

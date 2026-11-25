@@ -77,8 +77,11 @@ Follow the [Conventional Commits 1.0.0 specification](https://www.conventionalco
 3. **File** via `gh issue create` with:
    - Title: short imperative description of the problem (not the fix), lowercase, no trailing period
    - Body: use the template below
+   - Type: the issue type (`--type Bug`, `Feature`, or `Task`), where the repository has types
    - Labels: priority label (`P0`–`P4`) + category (`bug`, `enhancement`, `research`)
-4. **Link** related issues when they share a root cause
+4. **Link** related issues with real relations (`--blocked-by`, `--blocking`, `--parent`), not text mentions
+
+GitHub mechanics (types, relations, statuses, duplicate search, closing) follow the `github-issues` skill.
 
 ### Issue Body Template
 

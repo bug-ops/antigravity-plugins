@@ -249,11 +249,12 @@ For each finding, assess priority:
 - **P2** — structural debt that multiplies as the codebase grows: DRY violations, missing type abstractions, untestable design, boundary violations, missing timeouts
 - **P3** — maintainability and readability: API naming, comment quality, function length
 
-File a GitHub issue for every P1 and P2 finding. Batch multiple P3 findings of the same kind into one issue. The literal priority label is set at creation (create the priority label and every category label below first if missing, with `gh label create`; never use another priority scheme); finding symptoms count even without a proven root cause. Use the profile's code-fence language (`rust`, `ts`) for the Before/After blocks:
+File a GitHub issue for every P1 and P2 finding. Batch multiple P3 findings of the same kind into one issue. The literal priority label is set at creation (create the priority label and every category label below first if missing, with `gh label create`; never use another priority scheme); finding symptoms count even without a proven root cause. Follow [github-issues](../github-issues/SKILL.md) for capability detection, duplicate search, issue types (`Task` for structural debt, `Bug` for a finding that already misbehaves), and relations. Use the profile's code-fence language (`rust`, `ts`) for the Before/After blocks:
 
 ```bash
 gh issue create \
   --title "<concise title>" \
+  --type "<Task|Bug>" \
   --label "<P1|P2|P3|P4>,architecture,code-quality" \
   --body "$(cat <<'EOF'
 ## Finding

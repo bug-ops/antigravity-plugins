@@ -16,8 +16,10 @@ Triage open GitHub issues by priority and relations, group dependent and compati
 
 **1. Fetch unassigned open issues**
 
+Read [github-issues](../github-issues/SKILL.md) first for the relation/type fields below and the older-`gh` fallback.
+
 ```bash
-gh issue list --state open --limit 100 --search "no:assignee" --json number,title,body,labels,milestone,assignees
+gh issue list --state open --limit 100 --search "no:assignee" --json number,title,body,labels,milestone,assignees,issueType,parent,subIssues,blockedBy,blocking
 ```
 
 Only unassigned issues are eligible for triage. As a safety check, skip any result where `assignees` is non-empty.
@@ -41,20 +43,13 @@ Every issue with a P-label outranks every issue without one. Within the same P-l
 | no priority label | 9 |
 | `research` | 10 |
 
-If an issue has multiple labels, use the lowest (highest priority) score within its tier — with one exception: `research` overrides other category labels.
+If an issue has multiple labels, use the lowest (highest priority) score within its tier — with one exception: `research` overrides other category labels. An issue type counts as its category label when the label is missing: `Bug` as `bug`, `Feature` as `enhancement`.
 
 **Research goes to the tail.** `research` issues are real work and stay in the queue — never drop them — but they always sort to the end unless given an explicit P-label (Tier 1 wins).
 
 **3. Load issue relations**
 
-For each issue, read its authoritative GitHub relations:
-
-```bash
-gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by --jq '[.[] | {number, state, repo: .repository_url, assignees: [.assignees[].login]}]'
-gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocking --jq '[.[] | {number, state}]'
-gh api repos/{owner}/{repo}/issues/<n>/sub_issues --jq '[.[] | {number, state}]'
-gh api repos/{owner}/{repo}/issues/<n>/parent --jq '.number'   # 404 = no parent
-```
+The step 1 result already carries each issue's authoritative GitHub relations: `blockedBy`, `blocking`, and `subIssues` as `{nodes: [{number, state, title, url}], totalCount}`, and `parent` as an issue or null.
 
 Then fetch full details including comments: `gh issue view <number> --json number,title,body,labels,comments`. Analyze the body **and all comments**. Collect text references ("depends on #N", "blocked by #N", "part of #N", "after #N lands"); any without a matching GitHub relation is a **missing relation**, created in step 7.
 
@@ -65,6 +60,8 @@ Classify every blocker:
 | closed | satisfied — ignore the edge |
 | open, unassigned, in this repository | prerequisite — must land in the same group or an earlier one |
 | open, assigned, or in another repository | external — the blocked issue and everything depending on it sit out this pass |
+
+A blocker in the step 1 list is open and unassigned; for any other open blocker, its `url` names the repository and `gh issue view <url> --json state,assignees` checks assignment.
 
 A dependency cycle is a triage defect: report it and exclude its issues from selection.
 
@@ -119,14 +116,11 @@ Use `ask_question` with the recommended option first:
   - `(Recommended) Create all — <list>`
   - `Skip — leave them as text references`
 
-When `Create all` is chosen, create real GitHub relationships (API takes database `id`, not issue number):
+When `Create all` is chosen, create real GitHub relationships:
 
 ```bash
-id=$(gh api repos/{owner}/{repo}/issues/<blocker> --jq .id)
-gh api -X POST repos/{owner}/{repo}/issues/<blocked>/dependencies/blocked_by -F issue_id="$id"
-
-id=$(gh api repos/{owner}/{repo}/issues/<child> --jq .id)
-gh api -X POST repos/{owner}/{repo}/issues/<parent>/sub_issues -F sub_issue_id="$id"
+gh issue edit <blocked> --add-blocked-by <blocker>
+gh issue edit <parent> --add-sub-issue <child>
 ```
 
 **8. Launch `/solve-issue`**
