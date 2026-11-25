@@ -7,7 +7,7 @@ description: >-
   storytelling, practical examples, and progressive disclosure. Runs standalone
   or as the writer of the team-develop docs chain. Use when writing user guides,
   onboarding docs, tutorials, product documentation, a README, or doc comments.
-model: inherit
+model: flash
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

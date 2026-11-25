@@ -9,7 +9,7 @@ description: >-
   provides an unstructured product description. Not for ordinary planning or
   task breakdown of existing code. Also use for "/sdd init", "/sdd specify",
   "/sdd plan", "/sdd tasks", "/sdd review". Works in any language.
-model: inherit
+model: pro
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

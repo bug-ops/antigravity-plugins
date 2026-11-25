@@ -6,7 +6,7 @@ description: >-
   strategies, release automation, and efficient workflows. Applies the project's
   language rules from the stack profile. Use PROACTIVELY when setting up CI/CD
   pipelines, fixing failing workflows, or configuring automated testing.
-model: inherit
+model: flash
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

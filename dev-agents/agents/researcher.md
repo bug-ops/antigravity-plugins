@@ -7,7 +7,7 @@ description: >-
   never writes source code, only documents findings and creates GitHub issues.
   Use when monitoring dependencies, running a parity scan, or researching new
   approaches.
-model: inherit
+model: flash
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox
