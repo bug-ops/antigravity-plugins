@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `github-issues` skill (`skills/github-issues/SKILL.md` + `references/fields.md`, `references/rest-fallback.md`): shared GitHub issue mechanics covering capability detection, issue types, real relations (`--parent`, `--blocked-by`, `--blocking`, `relatesTo`), statuses, duplicate search/closing, evidence attachments/artifacts, and a REST fallback for `gh` older than 2.94.
+
+### Changed
+- Preload `skills/github-issues` by default in `code-reviewer`, `live-tester`, `researcher`, `arch-analyst`, and `security-analyst`, and reference it concisely from `solve-issue`, `triage-and-solve`, `arch-inspect`, `security-audit`, `live-testing`, `research-protocol`, `continuous-improvement/references/issue-management.md`, `init-project/references/rules/commits-and-issues.md`, and `team-develop/references/chains.md`.
+
 ### Fixed
 - Declare explicit `tools` allowlists in all 15 custom agent frontmatters (`read_file`, `write_file`, `edit_file`, `run_command`, `search_web`, `manage_task`, `schedule`, plus `invoke_subagent` and `manage_subagents` on `live-tester` and `researcher`) so spawned subagents can write `.local/handoff/` artifacts, run verification/scanner commands, and spawn `sdd-orchestrator`.
 

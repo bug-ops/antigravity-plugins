@@ -9,7 +9,7 @@ Language-agnostic development agents and workflows for **Google Antigravity**, w
 ## Features
 
 - **15 specialist custom agents** (`agents/*.md`) — usable both as background subagents (`invoke_subagent`) and primary session agents (`agy --agent <name>` or Antigravity App agent selector)
-- **21 workflow and protocol skills** (`skills/*/SKILL.md`) — progressively disclosed on demand or invoked explicitly via `/<skill-name>`
+- **22 workflow and protocol skills** (`skills/*/SKILL.md`) — progressively disclosed on demand or invoked explicitly via `/<skill-name>`
 - **Stack profiles (`skills/stack/`)** — Rust (Edition 2024 + `rust-modern-apis` 1.89–1.100), TypeScript/JavaScript (Node.js, Bun, browser), and Luau/Lua (Roblox/Rojo/Wally/pesde, Lune, Lua 5.1–5.5/LuaJIT)
 - **MCP-to-LSP code intelligence (`mcp_config.json`)** — bridges Antigravity to `rust-analyzer`, `typescript-language-server`, `luau-lsp`, and `lua-language-server` via [`mcpls`](https://github.com/bug-ops/mcpls)
 - **PreToolUse safety guard (`hooks.json` + `scripts/guard.sh`)** — protects `.local/protected-tests`, checks package registries against slopsquatting, and provides best-effort read-only & lead-only commit protection
@@ -49,6 +49,7 @@ Language-agnostic development agents and workflows for **Google Antigravity**, w
 - **`stack`** — Detects Rust, TypeScript/JavaScript, and Luau/Lua (including polyglot repos) and loads `toolchain.md` + per-role language rules.
 - **`team-lead`** — Shared Antigravity subagent orchestration mechanics (`invoke_subagent`, `send_message`, `manage_subagents`, reactive wakeup).
 - **`agent-handoff`** — Structured `.local/handoff/{TS}-{agent}.md` context-sharing protocol with compact frontmatter routing.
+- **`github-issues`** — Shared GitHub issue mechanics (capability detection, issue types, relations, statuses, duplicate search, closing, attachments/artifacts) preloaded by `code-reviewer`, `live-tester`, `researcher`, `arch-analyst`, and `security-analyst`.
 - **`rust-modern-apis`** — Stable Rust 1.89–1.100 API lookup table loaded automatically by the Rust profile.
 - **`/arch-inspect`**, **`/security-audit`**, **`/live-testing`**, **`/research-protocol`** — Specialized audit protocols (when invoked directly, delegate to their dedicated background specialist).
 

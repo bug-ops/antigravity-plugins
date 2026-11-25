@@ -111,8 +111,8 @@ For each anomaly found:
 2. **Document** — exact steps, config, relevant log excerpts
 3. **Classify** — P0 (critical) to P4 (nice-to-have); see [Issue Management](../continuous-improvement/references/issue-management.md)
 4. **Spec** — for a P0–P2 enhancement (never for a bug; not in team runs, Hard Rule 2): spawn `sdd-orchestrator` agent before filing; see [SDD Integration](../continuous-improvement/references/sdd-integration.md)
-5. **Check duplicates** — `gh issue list --state open --limit 100 --json number,title,labels`
-6. **File** (not in team runs, Hard Rule 2) — `gh issue create` with the literal `P0`-`P4` label set at creation (create the label if missing), a category label, reproduction steps, evidence; file the implementation issue in the same pass as the spec. A symptom without a root cause is still filed
+5. **Check duplicates** — `gh issue list --state open --limit 100 --json number,title,labels`, then the search passes in [github-issues](../github-issues/SKILL.md)
+6. **File** (not in team runs, Hard Rule 2) — follow [github-issues](../github-issues/SKILL.md); `gh issue create` with the issue type (`--type Bug` for an anomaly, `Feature` for an enhancement), the literal `P0`-`P4` label set at creation (create the label if missing), a category label, reproduction steps, evidence (a screenshot via `--attach`, a full log as an issue artifact); file the implementation issue in the same pass as the spec. A symptom without a root cause is still filed
 7. **Record** — add the finding row (issue and spec together) to the handoff `## Findings` in a CI cycle, or append it to the standalone journal otherwise; update `coverage-status.md`
 
 ## Phase 5: Cross-Interface Consistency
