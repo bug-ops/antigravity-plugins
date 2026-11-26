@@ -15,7 +15,7 @@ Language-agnostic development agents and workflows covering the full software li
 **Location**: [`./dev-agents`](./dev-agents)
 
 **Key features**:
-- **15 custom agents** (`pro` for deep reasoning roles; `inherit` for execution roles) usable both as primary agents (`agy --agent <name>`) and background subagents (`invoke_subagent`)
+- **15 custom agents** (`pro` for design, review, debugging, and audit gates; `inherit` for implementation roles; `flash` for high-volume procedural roles) usable both as primary agents (`agy --agent <name>`) and background subagents (`invoke_subagent`)
 - **22 productivity skills**:
   - `stack` — Stack detection and per-language reference loader (Rust, TypeScript, Luau/Lua)
   - `team-develop` — Multi-agent development orchestration across 10 task chains (`new-feature`, `spec-driven`, `task-loop`, `bug-fix`, `refactoring`, `security`, `docs`, `dependency`, `performance`, `ci-cd`) with mandatory critic and review gates

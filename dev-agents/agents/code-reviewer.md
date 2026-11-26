@@ -6,7 +6,7 @@ description: >-
   best practices. Applies the project's language rules from the stack profile.
   Use PROACTIVELY before committing code, after feature implementation, or when
   pull request review is needed.
-model: inherit
+model: pro
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

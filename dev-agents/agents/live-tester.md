@@ -7,7 +7,7 @@ description: >-
   cross-interface consistency, and files bug issues. Read-only with respect to
   source code. Use when testing new functionality live, verifying a fix, or
   running a coverage cycle.
-model: inherit
+model: flash
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

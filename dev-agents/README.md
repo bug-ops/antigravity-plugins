@@ -23,16 +23,24 @@ Language-agnostic development agents and workflows for **Google Antigravity**, w
 | `testing-engineer` | `inherit` | Acceptance tests (tests-first), unit/integration/property tests, mutation testing, redundancy audits |
 | `performance-engineer` | `inherit` | CPU/memory profiling, flamegraphs, benchmarking, async/build optimization |
 | `security-maintenance` | `pro` | Vulnerability assessment, dependency auditing, secure remediation |
-| `code-reviewer` | `inherit` | Two-pass code review, full check-suite verification, follow-up issue filing |
-| `cicd-devops` | `inherit` | GitHub Actions, SHA action pinning, cross-platform CI/CD, caching, release automation |
-| `debugger` | `inherit` | Systematic root-cause diagnosis, crash/async analysis, prevention protocol |
+| `code-reviewer` | `pro` | Two-pass code review, full check-suite verification, follow-up issue filing |
+| `cicd-devops` | `flash` | GitHub Actions, SHA action pinning, cross-platform CI/CD, caching, release automation |
+| `debugger` | `pro` | Systematic root-cause diagnosis, crash/async analysis, prevention protocol |
 | `critic` | `pro` | Adversarial design & implementation critique, scope conformance (Dimension 9), follow-up assessment |
-| `sdd-orchestrator` | `inherit` | Full-cycle Spec-Driven Development: BRD/SRS/NFR → spec/plan/tasks → Obsidian knowledge base |
-| `live-tester` | `inherit` | Read-only live execution of built artifacts, verification contracts, coverage tracking |
-| `tech-writer` | `inherit` | User-facing documentation (README, API docs, mdBook) with progressive disclosure |
-| `researcher` | `inherit` | Read-only dependency monitoring, innovation research, competitive parity |
+| `sdd-orchestrator` | `pro` | Full-cycle Spec-Driven Development: BRD/SRS/NFR → spec/plan/tasks → Obsidian knowledge base |
+| `live-tester` | `flash` | Read-only live execution of built artifacts, verification contracts, coverage tracking |
+| `tech-writer` | `flash` | User-facing documentation (README, API docs, mdBook) with progressive disclosure |
+| `researcher` | `flash` | Read-only dependency monitoring, innovation research, competitive parity |
 | `arch-analyst` | `pro` | Read-only architecture and code-quality audits (10 categories) |
 | `security-analyst` | `pro` | Read-only vulnerability & attack-surface audits (11 categories) |
+
+**Model tiers** apply when an agent runs as a subagent (`invoke_subagent`); as a primary agent (`agy --agent <name>`) it uses the session model.
+
+- `pro` — gates and judgment-heavy roles whose mistakes propagate downstream: design (`architect`, `sdd-orchestrator`), adversarial and final review (`critic`, `code-reviewer`), root-cause analysis (`debugger`), and security/architecture audits.
+- `inherit` — implementation roles (`developer`, `testing-engineer`, `performance-engineer`) follow the session model, so you choose the cost/quality trade-off (for example Orchestrator, or a fast model for routine work); their output always passes `pro` gates.
+- `flash` — high-volume, procedure-driven roles (live execution, dependency/parity scans, CI config, documentation) guided by detailed skills and reviewed downstream. `sdd-orchestrator` is pinned to `pro` so specs spawned by `flash` agents do not inherit `flash`.
+
+Reasoning effort cannot be set per agent: Antigravity custom-agent frontmatter has no `effort` field, and the session-level `--effort` / `/effort` setting is the only effort control.
 
 ## Skills
 

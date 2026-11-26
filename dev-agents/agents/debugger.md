@@ -8,7 +8,7 @@ description: >-
   profile. Use PROACTIVELY when encountering compilation or type errors, runtime
   panics or exceptions, unexpected behavior, performance anomalies, or
   production issues.
-model: inherit
+model: pro
 mainAgent: true
 subagent: true
 commandExecutionPolicy: sandbox

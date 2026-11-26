@@ -39,6 +39,13 @@ for agent_md in "$plugin"/agents/*.md; do
   for req_tool in read_file write_file edit_file run_command; do
     grep -qxF "$req_tool" <<<"$agent_tools" || fail "$agent_md frontmatter tools missing '$req_tool'"
   done
+  agent_model=$(awk 'BEGIN{n=0}/^---/{n++;if(n==2)exit;next}n==1&&/^model:/{sub(/^model:[[:space:]]*/,"");print;exit}' "$agent_md")
+  case $agent_model in
+    inherit | flash_lite | flash | pro) ;;
+    *) fail "$agent_md frontmatter model '$agent_model' is not one of inherit|flash_lite|flash|pro" ;;
+  esac
+  grep -qE '^effort:' < <(awk 'BEGIN{n=0}/^---/{n++;if(n==2)exit;next}n==1' "$agent_md") &&
+    fail "$agent_md frontmatter declares unsupported key 'effort'"
   if [[ $base == live-tester || $base == researcher ]]; then
     grep -qxF "invoke_subagent" <<<"$agent_tools" || fail "$agent_md frontmatter tools missing 'invoke_subagent'"
   fi

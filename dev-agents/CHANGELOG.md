@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `github-issues` skill (`skills/github-issues/SKILL.md` + `references/fields.md`, `references/rest-fallback.md`): shared GitHub issue mechanics covering capability detection, issue types, real relations (`--parent`, `--blocked-by`, `--blocking`, `relatesTo`), statuses, duplicate search/closing, evidence attachments/artifacts, and a REST fallback for `gh` older than 2.94.
 
 ### Changed
+- Rebalance custom agent model tiers for quota efficiency without weakening quality gates: `code-reviewer`, `debugger`, and `sdd-orchestrator` move from `inherit` to `pro` (final review gate, root-cause analysis, and spec authoring no longer degrade when the session or a `flash` parent runs a fast model); `live-tester`, `researcher`, `cicd-devops`, and `tech-writer` move from `inherit` to `flash` (high-volume, skill-driven roles whose output passes `pro` gates). README documents the tier policy and that reasoning effort is not configurable per agent; `check-consistency.sh` validates `model` values.
 - Preload `skills/github-issues` by default in `code-reviewer`, `live-tester`, `researcher`, `arch-analyst`, and `security-analyst`, and reference it concisely from `solve-issue`, `triage-and-solve`, `arch-inspect`, `security-audit`, `live-testing`, `research-protocol`, `continuous-improvement/references/issue-management.md`, `init-project/references/rules/commits-and-issues.md`, and `team-develop/references/chains.md`.
 
 ### Fixed
