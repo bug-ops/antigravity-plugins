@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-26
+
 ### Added
 - `github-issues` skill (`skills/github-issues/SKILL.md` + `references/fields.md`, `references/rest-fallback.md`): shared GitHub issue mechanics covering capability detection, issue types, real relations (`--parent`, `--blocked-by`, `--blocking`, `relatesTo`), statuses, duplicate search/closing, evidence attachments/artifacts, and a REST fallback for `gh` older than 2.94.
 
@@ -28,5 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project scaffolding skill (`init-project`) targeting `.agents/rules/`, `.agents/skills/verify/SKILL.md`, and `.local/`.
 - DevContainer configuration (`.devcontainer/`), GitHub Actions validation workflow, offline hook and consistency tests, and `bench/` evaluation harness for `agy -p`.
 
-[Unreleased]: https://github.com/bug-ops/antigravity-plugins/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bug-ops/antigravity-plugins/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/bug-ops/antigravity-plugins/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/bug-ops/antigravity-plugins/releases/tag/v1.0.0
