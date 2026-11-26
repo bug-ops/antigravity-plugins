@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "dev-agents",
   "displayName": "Dev Agents",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "15 specialist software engineering agents and 22 workflow skills with Rust, TypeScript, and Luau/Lua stack profiles, MCP-LSP intelligence via mcpls, and safety hooks.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [

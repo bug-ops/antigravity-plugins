@@ -6,7 +6,7 @@ A curated collection of native plugins for **Google Antigravity** (Antigravity C
 
 ### `dev-agents`
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](./dev-agents)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./dev-agents)
 [![License](https://img.shields.io/badge/license-MIT-green)](./dev-agents/LICENSE)
 [![Stacks](https://img.shields.io/badge/stacks-Rust%20%7C%20TypeScript%20%7C%20Luau-orange)](./dev-agents/README.md#stack-profiles)
 

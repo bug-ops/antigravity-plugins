@@ -1,6 +1,6 @@
 # dev-agents
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/bug-ops/antigravity-plugins)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/bug-ops/antigravity-plugins)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Stacks](https://img.shields.io/badge/stacks-Rust%20%7C%20TypeScript%20%7C%20Luau-orange)](#stack-profiles)
 
